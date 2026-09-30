@@ -75,7 +75,7 @@ salen de tu máquina: el código de 6 dígitos aparece en **http://127.0.0.1:543
    npx supabase db push          # aplica supabase/migrations/*
    psql "$DATABASE_URL" -f supabase/seed.sql   # catálogo de biomarcadores
    ```
-   Sin CLI: pega en el **SQL Editor**, en orden, los tres archivos de `supabase/migrations/` y luego `supabase/seed.sql`.
+   Sin CLI (más fácil): abre **SQL Editor → New query**, pega todo [`supabase/setup.sql`](supabase/setup.sql) y pulsa **Run**. Una sola vez, en un proyecto nuevo.
 3. **Authentication → URL Configuration**: *Site URL* = tu dominio (p. ej. `https://bombadil.vercel.app`);
    agrega `https://<tu-dominio>/auth/confirm` a *Redirect URLs*.
 4. **Authentication → Email Templates → Magic Link**: pega el contenido de

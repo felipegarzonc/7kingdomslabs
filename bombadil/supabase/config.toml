@@ -6,7 +6,7 @@ project_id = "bombadil"
 schemas = ["public"]
 
 [db]
-major_version = 16
+major_version = 17
 
 [db.seed]
 enabled = true
@@ -14,7 +14,7 @@ sql_paths = ["./seed.sql"]
 
 [auth]
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/confirm"]
+additional_redirect_urls = ["http://localhost:3000/auth/confirm", "http://127.0.0.1:3000/auth/confirm"]
 enable_signup = false
 
 [auth.email]
@@ -29,3 +29,8 @@ content_path = "./supabase/templates/magic_link.html"
 
 [storage]
 file_size_limit = "15MiB"
+
+# Local inbox for login codes: http://127.0.0.1:54324
+[local_smtp]
+enabled = true
+port = 54324

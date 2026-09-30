@@ -31,7 +31,40 @@ aunque la API del LLM falle. Nada llega al participante sin revisión humana, sa
 Next.js 16 (App Router, Server Actions) · TypeScript · Supabase (Postgres + Auth + Storage, RLS en todo) ·
 Claude API (`@anthropic-ai/sdk`, salidas validadas con Zod) · Tailwind 4 · Recharts · Vitest · Playwright · Vercel.
 
-## Puesta en marcha (≈30 minutos)
+## Verlo en tu computador (5 minutos, sin cuentas)
+
+Necesitas **Node 20+** y **Docker Desktop** abierto. Todo corre en tu máquina con datos sintéticos.
+
+```bash
+git clone https://github.com/felipegarzonc/7kingdomslabs.git
+cd 7kingdomslabs && git checkout claude/bombadil-longevity-coach-ef7aiv
+cd bombadil
+npm install
+npx supabase start          # Postgres + Auth + Storage locales; aplica migraciones y catálogo
+npx supabase status -o env  # muestra API_URL, ANON_KEY y SERVICE_ROLE_KEY
+```
+
+Crea `.env.local` con esos valores:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<ANON_KEY>
+SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY>
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ANTHROPIC_API_KEY=            # opcional para mirar; necesaria para extraer PDFs y generar informes
+```
+
+```bash
+npm run demo:seed -- tu@correo.com   # tú = operador; crea el participante demo@bombadil.local
+npm run dev                          # http://localhost:3000
+```
+
+Entra en http://localhost:3000/login con `tu@correo.com` (panel del operador) o con
+`demo@bombadil.local` (vista del participante, en el celular o con la ventana angosta). Los correos no
+salen de tu máquina: el código de 6 dígitos aparece en **http://127.0.0.1:54324**. Supabase Studio
+(para ver las tablas) está en http://127.0.0.1:54323. Para apagar todo: `npx supabase stop`.
+
+## Puesta en marcha en producción (≈30 minutos)
 
 ### 1. Supabase
 

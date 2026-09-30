@@ -219,7 +219,7 @@ export default async function AdminParticipantPage({ params }: { params: Promise
             <ul className="mb-3 text-sm">
               {feedback.data?.map((f) => (
                 <li key={f.id}>
-                  {fmtDate(f.recorded_at)} · {fmtCop(f.willingness_to_pay_cop)} · {f.would_continue ?? "—"} {f.comments ? `· “${f.comments}”` : ""}
+                  {fmtDate(f.recorded_at)} · {fmtCop(f.willingness_to_pay_cop)} · {({ yes: "seguiría", maybe: "tal vez", no: "no seguiría" } as Record<string, string>)[f.would_continue] ?? "—"} {f.comments ? `· “${f.comments}”` : ""}
                 </li>
               ))}
             </ul>

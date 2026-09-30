@@ -79,14 +79,14 @@ export default async function TimelinePage() {
                           {fmtDate(m.latest.at)} · {m.history.length} {m.history.length === 1 ? "dato" : "datos"}
                         </p>
                       </div>
-                      <Sparkline values={m.history.map((h) => h.value)} />
-                      <div className="w-24 text-right">
+                      <span className="hidden min-[400px]:inline"><Sparkline values={m.history.map((h) => h.value)} /></span>
+                      <div className="flex w-28 flex-col items-end gap-1 text-right">
                         <p className="text-sm font-semibold tabular-nums">
                           {fmtNum(m.latest.value)} <span className="text-xs font-normal text-muted">{m.unit}</span>
                         </p>
-                      </div>
-                      <div className="hidden flex-col items-end gap-1 sm:flex">
                         <FlagBadge flag={m.flag} optimal={m.optimal} />
+                      </div>
+                      <div className="hidden sm:flex">
                         <TrendBadge trend={m.trend} />
                       </div>
                     </Link>

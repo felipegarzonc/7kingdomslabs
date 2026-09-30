@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Piloto" };
 
+const CONTINUE_LABEL: Record<string, string> = { yes: "seguiría", maybe: "tal vez", no: "no seguiría" };
+
 export default async function AdminHome() {
   await requireAdmin();
   const supabase = await createClient();
@@ -30,7 +32,7 @@ export default async function AdminHome() {
         <Stat label="Participantes activos" value={o.counts.active} hint={`${o.counts.invited} invitados sin onboarding`} />
         <Stat label="Retención semana 6" value={week6?.rate !== null && week6?.rate !== undefined ? `${Math.round(week6.rate * 100)} %` : "—"} hint={week6 ? `${week6.reported}/${week6.eligible} reportaron` : "Aún nadie llega a la semana 6"} />
         <Stat label="Con efecto medible" value={`${effectCount}/${activeRows.length}`} hint="Meta en camino/lograda o marcador mejorando" />
-        <Stat label="Disposición a pagar" value={o.wtp.median ? fmtCop(o.wtp.median) : "—"} hint={`Mediana mensual · ${o.wtp.values.length} respuestas`} />
+        <Stat label="Disposición a pagar" value={o.wtp.median ? fmtCop(o.wtp.median) : "—"} hint={`Mediana mensual · ${o.wtp.values.length} ${o.wtp.values.length === 1 ? "respuesta" : "respuestas"}`} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -100,7 +102,7 @@ export default async function AdminHome() {
           <ul className="divide-y divide-border text-sm">
             {o.wtp.recent.map((f) => (
               <li key={f.id} className="py-2">
-                <span className="font-medium tabular-nums">{fmtCop(f.willingness_to_pay_cop)}</span> · {f.would_continue ?? "—"} · semana {f.week ?? "—"}
+                <span className="font-medium tabular-nums">{fmtCop(f.willingness_to_pay_cop)}</span> · {CONTINUE_LABEL[f.would_continue as string] ?? "—"} · semana {f.week ?? "—"}
                 {f.comments ? <p className="text-muted">“{f.comments}”</p> : null}
               </li>
             ))}

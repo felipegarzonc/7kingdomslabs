@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { fmtDateTime } from "@/components/format";
+import { fmtDateTime, isWithinHours } from "@/components/format";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { SYMPTOM_LABEL, type Symptom } from "@/domain/escalation";
@@ -18,17 +18,19 @@ export default async function CheckinsQueue({ searchParams }: { searchParams: Pr
   const supabase = await createClient();
   let q = supabase
     .from("checkins")
-    .select("id, week, submitted_at, adherence, symptoms, free_text, duration_seconds, participant_id, participants(display_name, email), checkin_replies(status, draft, final_text, error, prompt_version, model)")
+    .select("id, week, submitted_at, adherence, symptoms, free_text, duration_seconds, participant_id, participants(display_name, email), checkin_replies(status, draft, final_text, error, prompt_version, model, sent_at)")
     .order("submitted_at", { ascending: false })
     .limit(60);
   if (id) q = q.eq("id", id);
   const { data } = await q;
   const items = (data ?? []).map((c) => {
-    const rep = c.checkin_replies as unknown as { status: string; draft: string | null; final_text: string | null; error: string | null; prompt_version: string | null; model: string | null } | Array<unknown> | null;
-    const reply = (Array.isArray(rep) ? rep[0] : rep) as { status: string; draft: string | null; final_text: string | null; error: string | null; prompt_version: string | null; model: string | null } | undefined;
+    type Reply = { status: string; draft: string | null; final_text: string | null; error: string | null; prompt_version: string | null; model: string | null; sent_at: string | null };
+    const rep = c.checkin_replies as unknown as Reply | Reply[] | null;
+    const reply = (Array.isArray(rep) ? rep[0] : rep) ?? undefined;
     return { ...c, reply };
   });
-  const pending = id ? items : items.filter((c) => c.reply?.status !== "sent");
+  // Pending first; replies sent in the last 12 h stay visible as confirmation.
+  const pending = id ? items : items.filter((c) => c.reply?.status !== "sent" || isWithinHours(c.reply.sent_at, 12));
 
   return (
     <>
@@ -63,7 +65,10 @@ export default async function CheckinsQueue({ searchParams }: { searchParams: Pr
                   </div>
                   <div>
                     {c.reply?.status === "sent" ? (
-                      <p className="text-sm whitespace-pre-line">{c.reply.final_text}</p>
+                      <>
+                        <Badge tone="good">✓ Enviada {fmtDateTime(c.reply.sent_at)}</Badge>
+                        <p className="mt-2 text-sm whitespace-pre-line">{c.reply.final_text}</p>
+                      </>
                     ) : c.reply?.status === "draft" ? (
                       <>
                         <ReplyForm checkinId={c.id} draft={c.reply.draft ?? ""} />

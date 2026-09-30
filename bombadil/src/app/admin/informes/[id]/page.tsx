@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { fmtDateTime } from "@/components/format";
 import { ReportView } from "@/components/report-view";
 import { SubmitButton } from "@/components/submit-button";
-import { Badge, Card, PageHeader } from "@/components/ui";
+import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import type { Snapshot } from "@/domain/snapshot";
 import { logAdminAccess } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
@@ -46,6 +46,11 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
           ) : null
         }
       />
+      {r.status === "approved" ? (
+        <div className="mb-4">
+          <Notice tone="good">Informe aprobado y publicado el {fmtDateTime(r.approved_at)}. El participante ya lo ve y sus prioridades se actualizaron.</Notice>
+        </div>
+      ) : null}
       <div className="grid gap-4 xl:grid-cols-2">
         <Card title={r.status === "draft" ? "Editar antes de aprobar" : "Contenido publicado"}>{r.status === "draft" ? <ReportEditor reportId={id} content={content} /> : <ReportView content={content} />}</Card>
         <div className="flex flex-col gap-4">

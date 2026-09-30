@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { AlertNotices } from "@/components/alert-list";
 import { fmtDate } from "@/components/format";
-import { Card, PageHeader } from "@/components/ui";
+import { Card, Notice, PageHeader } from "@/components/ui";
 import { pilotWeek } from "@/domain/pilot";
 import { requireParticipant } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -18,13 +19,21 @@ export default async function CheckinPage() {
     supabase.from("checkins").select("id, week, submitted_at, checkin_replies(final_text, status)").eq("participant_id", p.id).order("week", { ascending: false }).limit(12),
   ]);
 
+  // Escalations from this week's check-in stay visible here (not only in the action response).
+  const { data: alerts } = current
+    ? await supabase.from("alerts").select("level, message").eq("origin", "checkin").eq("origin_id", current.id).eq("status", "open").neq("level", "next_visit")
+    : { data: [] };
+
   return (
     <>
       <PageHeader title={`Check-in · semana ${week}`} subtitle="Menos de 2 minutos." />
       {current ? (
-        <Card>
-          <p className="text-sm">Ya enviaste el check-in de esta semana ({fmtDate(current.submitted_at)}). ¡Nos vemos la próxima!</p>
-        </Card>
+        <div className="flex flex-col gap-3">
+          <AlertNotices alerts={alerts ?? []} />
+          <Notice tone="good">
+            Recibimos tu check-in de esta semana ({fmtDate(current.submitted_at)}). Tendrás una respuesta del equipo pronto. ¡Nos vemos la próxima!
+          </Notice>
+        </div>
       ) : (
         <Card>
           <CheckinForm priorities={p.priorities} week={week} />

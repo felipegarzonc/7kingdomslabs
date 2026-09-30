@@ -42,7 +42,7 @@ export function MeasurementForm() {
           </Select>
         </Field>
         <Field label="Fecha y hora" htmlFor="measured_at">
-          <Input id="measured_at" name="measured_at" type="datetime-local" defaultValue={nowLocalBogota()} max={nowLocalBogota()} />
+          <Input id="measured_at" name="measured_at" type="datetime-local" defaultValue={nowLocalBogota()} />
         </Field>
       </div>
       {type === "bp" ? (

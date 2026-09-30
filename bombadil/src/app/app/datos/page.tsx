@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { fmtDateTime } from "@/components/format";
-import { Card, LinkButton, PageHeader } from "@/components/ui";
+import { buttonClass, Card, PageHeader } from "@/components/ui";
 import { requireParticipant } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteAccountForm, ProfileForm } from "./forms";
@@ -22,9 +22,10 @@ export default async function MyDataPage() {
         <div className="flex flex-col gap-4">
           <Card title="Descargar mis datos">
             <p className="mb-3 text-sm text-muted">Un archivo JSON con todo lo que tenemos sobre ti: perfil, consentimientos, exámenes transcritos, mediciones, metas, check-ins, informes y alertas.</p>
-            <LinkButton href="/app/datos/exportar" variant="secondary" prefetch={false}>
+            {/* Plain anchor: a route handler download must not go through client-side navigation. */}
+            <a href="/app/datos/exportar" download className={buttonClass("secondary")}>
               Descargar (JSON)
-            </LinkButton>
+            </a>
           </Card>
           <Card title="Consentimiento">
             <ul className="text-sm">

@@ -6,3 +6,5 @@ export const fmtNum = (n: number | null | undefined, digits = 1) => (n === null 
 export const fmtCop = (n: number | null | undefined) => (n === null || n === undefined ? "—" : n.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }));
 /** YYYY-MM-DDTHH:mm in Bogotá time, for datetime-local inputs. */
 export const nowLocalBogota = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 16);
+/** True if the timestamp is within the last `hours` hours. */
+export const isWithinHours = (iso: string | null | undefined, hours: number) => !!iso && Date.parse(iso) > Date.now() - hours * 3600e3;

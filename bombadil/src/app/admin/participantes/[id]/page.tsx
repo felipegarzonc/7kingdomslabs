@@ -6,7 +6,7 @@ import { fmtCop, fmtDate, fmtDateTime, fmtNum } from "@/components/format";
 import { GoalStatusBadge } from "@/components/goal-status";
 import { FlagBadge, TrendBadge } from "@/components/marker-bits";
 import { SubmitButton } from "@/components/submit-button";
-import { Badge, Card, LinkButton, PageHeader } from "@/components/ui";
+import { Badge, buttonClass, Card, PageHeader } from "@/components/ui";
 import { BIOMARKERS } from "@/domain/biomarkers";
 import { pilotWeek } from "@/domain/pilot";
 import { buildSnapshot, metricLabel, MEASUREMENT_LABEL } from "@/domain/snapshot";
@@ -227,9 +227,9 @@ export default async function AdminParticipantPage({ params }: { params: Promise
           </Card>
           <Card title="Datos del participante" className="border-danger/40">
             <p className="mb-3 text-sm text-muted">Exportar o suprimir a solicitud del titular (Ley 1581).</p>
-            <LinkButton href={`/admin/participantes/${p.id}/exportar`} variant="secondary" prefetch={false} className="mb-4">
+            <a href={`/admin/participantes/${p.id}/exportar`} download className={buttonClass("secondary", "mb-4")}>
               Exportar JSON
-            </LinkButton>
+            </a>
             <DeleteParticipantForm participantId={p.id} />
           </Card>
         </div>

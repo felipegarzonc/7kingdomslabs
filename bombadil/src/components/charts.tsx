@@ -6,6 +6,8 @@ export interface ChartPoint {
   value: number;
 }
 
+/** Date-only strings (lab sample dates) are anchored at noon UTC so they never shift a day in Bogotá time. */
+const toTime = (at: string) => Date.parse(at.length === 10 ? `${at}T12:00:00Z` : at);
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "2-digit", timeZone: "America/Bogota" });
 const fmtNum = (n: number) => n.toLocaleString("es-CO", { maximumFractionDigits: 2 });
 
@@ -37,7 +39,7 @@ function Tip({ active, payload, unit }: Partial<TooltipContentProps<number, stri
 
 /** One marker over time, with the reference range shaded. */
 export function MarkerChart({ points, unit, name, low, high, height = 240 }: { points: ChartPoint[]; unit: string; name: string; low?: number; high?: number; height?: number }) {
-  const data = [...points].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)).map((p) => ({ t: Date.parse(p.at), value: p.value }));
+  const data = [...points].sort((a, b) => toTime(a.at) - toTime(b.at)).map((p) => ({ t: toTime(p.at), value: p.value }));
   if (!data.length) return null;
   const [y0, y1] = domainFor(data.map((d) => d.value), low, high);
   const tMin = data[0].t;

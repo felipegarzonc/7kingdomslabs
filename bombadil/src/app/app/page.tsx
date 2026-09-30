@@ -13,6 +13,11 @@ import { FeedbackCard } from "./feedback-card";
 
 export const metadata: Metadata = { title: "Inicio" };
 
+/** Alarm notices on the home page are about the last 7 days; older ones live in the operator's queue. */
+function weekAgo() {
+  return new Date(Date.now() - 7 * 24 * 3600e3).toISOString();
+}
+
 export default async function ParticipantHome() {
   const { participant: p } = await requireParticipant();
   const supabase = await createClient();
@@ -21,7 +26,7 @@ export default async function ParticipantHome() {
     loadParticipantData(supabase, p.id),
     supabase.from("checkins").select("id").eq("participant_id", p.id).eq("week", week).maybeSingle(),
     supabase.from("checkin_replies").select("final_text, sent_at, checkins(week)").eq("participant_id", p.id).eq("status", "sent").order("sent_at", { ascending: false }).limit(1).maybeSingle(),
-    supabase.from("alerts").select("level, message, created_at").eq("participant_id", p.id).eq("status", "open").in("level", ["urgency", "consult_soon"]).order("created_at", { ascending: false }).limit(5),
+    supabase.from("alerts").select("level, message, created_at").eq("participant_id", p.id).eq("status", "open").in("level", ["urgency", "consult_soon"]).gte("created_at", weekAgo()).order("created_at", { ascending: false }).limit(5),
     supabase.from("pilot_feedback").select("id").eq("participant_id", p.id).limit(1),
     supabase.from("lab_documents").select("id", { count: "exact", head: true }).eq("participant_id", p.id).neq("status", "reviewed"),
   ]);
@@ -112,7 +117,7 @@ export default async function ParticipantHome() {
             <div className="col-span-2 rounded-xl bg-surface-2 p-3 sm:col-span-4">
               <dt className="text-xs text-muted">Presión arterial (media 30 días, diurna)</dt>
               <dd className="mt-0.5 text-lg font-semibold tabular-nums">
-                {snapshot.derived.bp ? `${fmtNum(snapshot.derived.bp.recentMeanSystolic, 0)}/${fmtNum(snapshot.derived.bp.recentMeanDiastolic, 0)} mmHg · ${snapshot.derived.bp.readings} lecturas` : "—"}
+                {snapshot.derived.bp ? `${fmtNum(snapshot.derived.bp.recentMeanSystolic, 0)}/${fmtNum(snapshot.derived.bp.recentMeanDiastolic, 0)} mmHg · ${snapshot.derived.bp.readings} ${snapshot.derived.bp.readings === 1 ? "lectura" : "lecturas"}` : "—"}
               </dd>
             </div>
           </dl>

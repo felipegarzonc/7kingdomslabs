@@ -1,0 +1,31 @@
+# Local development with the Supabase CLI (`supabase start`). Hosted projects
+# are configured in the dashboard; see README → "Deploy".
+project_id = "bombadil"
+
+[api]
+schemas = ["public"]
+
+[db]
+major_version = 16
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/confirm"]
+enable_signup = false
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+otp_length = 6
+otp_expiry = 3600
+
+[auth.email.template.magic_link]
+subject = "Tu código de acceso a Bombadil"
+content_path = "./supabase/templates/magic_link.html"
+
+[storage]
+file_size_limit = "15MiB"

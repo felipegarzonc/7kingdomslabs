@@ -54,6 +54,11 @@ async function onboard(page: Page, email: string) {
   await expect(page).toHaveURL(/\/app$/);
 }
 
+/** Optional visual record for manual design review: SCREENSHOT_DIR=... npm run test:e2e */
+async function snap(page: Page, name: string) {
+  if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, `${name}.png`), fullPage: true });
+}
+
 async function noHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
@@ -63,6 +68,7 @@ test("public pages render and protected routes redirect to login", async ({ page
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
+  await snap(page, "01-login");
   await noHorizontalScroll(page);
   await page.goto("/privacidad");
   await expect(page.getByRole("heading", { name: "Aviso de privacidad" })).toBeVisible();
@@ -93,6 +99,7 @@ test("participant consents, onboards and sees the home", async ({ page }) => {
 test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {
   await login(page, ANA);
   await page.goto("/app/mediciones");
+  await snap(page, "02-measurements");
   await page.getByLabel("Sistólica (alta)").fill("186");
   await page.getByLabel("Diastólica (baja)").fill("96");
   await page.getByRole("button", { name: "Guardar medición" }).click();
@@ -111,8 +118,10 @@ test("weekly check-in with an alarm symptom escalates; the form fits a phone", a
   await page.getByLabel("Sueño promedio (h)").fill("6.5");
   await page.getByLabel("Dolor u opresión en el pecho").check();
   await page.getByLabel("¿Qué fue lo más difícil esta semana?").fill("Mucho trabajo, poco ejercicio.");
+  await snap(page, "03-checkin-form");
   await page.getByRole("button", { name: /Enviar check-in/ }).click();
   await expect(page.getByText("⚠️ Atención inmediata")).toBeVisible();
+  await snap(page, "04-checkin-urgency");
   await expect(page.getByText(/Recibimos tu check-in/)).toBeVisible();
   expect(Date.now() - started).toBeLessThan(120_000);
 });
@@ -151,6 +160,7 @@ test("lab PDF: upload → masked extraction → human review → timeline", asyn
   await page.getByRole("link", { name: /Glucosa en ayunas/ }).click();
   // 5.7 mmol/L converted to canonical mg/dL.
   await expect(page.getByText("102,7").filter({ visible: true }).first()).toBeVisible();
+  await snap(page, "07-marker-detail");
   await noHorizontalScroll(page);
 });
 
@@ -179,8 +189,12 @@ test("report is drafted, approved by the operator and then visible", async ({ pa
   await login(page, ANA);
   await expect(page.getByText("Caminar 30 minutos después del almuerzo, 5 días")).toBeVisible();
   await expect(page.getByText(/Semana sólida con la caminata/)).toBeVisible();
+  await snap(page, "08-participant-home");
+  await page.goto("/app/linea-de-tiempo");
+  await snap(page, "06-timeline");
   await page.goto("/app/informes");
   await expect(page.getByText("Revisado por el operador.")).toBeVisible();
+  await snap(page, "09-report");
 });
 
 test("another participant cannot open Ana's PDF", async ({ page }) => {
@@ -198,6 +212,7 @@ test("another participant cannot open Ana's PDF", async ({ page }) => {
 test("operator views are audit-logged; dashboard shows the pilot", async ({ page }) => {
   await login(page, ADMIN);
   await expect(page.getByText("Retención por semana")).toBeVisible();
+  await snap(page, "10-admin-dashboard");
   await page.goto("/admin/auditoria");
   await expect(page.getByRole("cell", { name: "view_participant" }).first()).toBeVisible();
   await expect(page.getByRole("cell", { name: "review_lab" }).first()).toBeVisible();

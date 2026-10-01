@@ -1,0 +1,478 @@
+/**
+ * Critical flows, end to end, on a phone viewport:
+ *  1. operator invites → participant consents and onboards
+ *  2. deterministic urgency on a BP crisis and on alarm symptoms in the check-in
+ *  3. PDF upload → PII-masked extraction → human review → timeline
+ *  4. report drafted → edited/approved by the operator → visible to participant
+ *  5. data rights: another participant cannot read the PDF; export; full deletion
+ * Runs via `npm run test:e2e` (scripts/e2e.sh), never against production.
+ */
+import { expect, test, type Page } from "@playwright/test";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { CONSENT_VERSION } from "../src/content/legal";
+import { makeImagingPdf, makeLabPdf } from "./support/make-lab-pdf";
+
+test.describe.configure({ mode: "serial" });
+
+const ADMIN = "admin@bombadil.test";
+const ANA = "ana@bombadil.test";
+const BETO = "beto@bombadil.test";
+
+async function login(page: Page, email: string, { expectSuccess = true } = {}) {
+  await page.goto("/login");
+  await page.getByLabel("Correo electrónico").fill(email);
+  await page.getByRole("button", { name: "Recibir código" }).click();
+  await page.getByLabel("Código de 6 dígitos").fill("123456");
+  await page.getByRole("button", { name: "Entrar" }).click();
+  if (expectSuccess) await page.waitForURL((u) => !u.pathname.startsWith("/login"));
+}
+
+async function logout(page: Page) {
+  await page.getByRole("button", { name: "Salir" }).click();
+  await expect(page).toHaveURL(/\/login/);
+}
+
+async function invite(page: Page, email: string, name: string) {
+  await page.goto("/admin/participantes/nuevo");
+  await page.getByLabel("Correo", { exact: true }).fill(email);
+  await page.getByLabel("Nombre (solo visible para ti)").fill(name);
+  await page.getByLabel("Enviarle ahora el correo con el código de acceso").uncheck();
+  await page.getByRole("button", { name: "Invitar" }).click();
+  await expect(page.getByRole("heading", { name })).toBeVisible();
+}
+
+async function onboard(page: Page, email: string) {
+  await login(page, email);
+  await expect(page).toHaveURL(/\/onboarding/);
+  await page.getByRole("checkbox", { name: /autorizo el tratamiento/ }).check();
+  await page.getByLabel("Fecha de nacimiento").fill("1982-08-15");
+  await page.getByLabel("Sexo biológico").selectOption("male");
+  await page.getByRole("button", { name: "Empezar" }).click();
+  await expect(page).toHaveURL(/\/app\/empezar$/);
+}
+
+/** Optional visual record for manual design review: SCREENSHOT_DIR=... npm run test:e2e */
+async function snap(page: Page, name: string) {
+  if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, `${name}.png`), fullPage: true });
+}
+
+async function noHorizontalScroll(page: Page) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+}
+
+test("public pages render and protected routes redirect to login", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: /Entiende tus exámenes/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Quiero participar" }).first()).toHaveAttribute("href", /^mailto:/);
+  // SEO: one h1, a canonical URL, a description and structured data (FAQ) for search engines.
+  await expect(page.locator("h1")).toHaveCount(1);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /^https?:\/\/[^/]+\/?$/);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /colesterol/);
+  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? "[]");
+  expect(ld.find((x: { "@type": string }) => x["@type"] === "FAQPage").mainEntity.length).toBeGreaterThan(4);
+  expect((await page.request.get("/robots.txt")).status()).toBe(200);
+  expect(await (await page.request.get("/sitemap.xml")).text()).toContain("<urlset");
+  await snap(page, "00-landing");
+  await noHorizontalScroll(page);
+  await page.goto("/inicio");
+  await expect(page.getByRole("heading", { level: 1, name: /Entiende tus exámenes/ })).toBeVisible();
+  await page.getByRole("link", { name: "Entrar", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto("/app");
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Entra a Bombadil" })).toBeVisible();
+  await snap(page, "01-login");
+  await noHorizontalScroll(page);
+  await page.goto("/privacidad");
+  await expect(page.getByRole("heading", { name: "Aviso de privacidad" })).toBeVisible();
+  await page.goto("/admin");
+  await expect(page).toHaveURL(/\/login/);
+});
+
+test("uninvited emails cannot get in", async ({ page }) => {
+  await login(page, "nadie@bombadil.test", { expectSuccess: false });
+  await expect(page.getByText("Código inválido o vencido")).toBeVisible();
+});
+
+test("operator invites two participants", async ({ page }) => {
+  await login(page, ADMIN);
+  await expect(page.getByRole("heading", { name: "Panel del piloto" })).toBeVisible();
+  await invite(page, ANA, "Ana Prueba");
+  await invite(page, BETO, "Beto Prueba");
+});
+
+test("participant consents, onboards and sees the home", async ({ page }) => {
+  await onboard(page, ANA);
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "Hola, Ana" })).toBeVisible();
+  await expect(page.getByText("Empecemos por lo que ya haces")).toBeVisible();
+  // The game frame is there from day one: level, streak and this week's quests.
+  await expect(page.getByText("Aprendiz del bosque").first()).toBeVisible();
+  await noHorizontalScroll(page);
+  await page.goto("/app/datos");
+  await expect(page.getByText(`Versión ${CONSENT_VERSION} · aceptado`, { exact: false })).toBeVisible();
+});
+
+test("own habits first → optional suggestions → logging today", async ({ page }) => {
+  await login(page, ANA);
+  await page.goto("/app/empezar");
+  // What Ana already does counts from day one.
+  await page.getByLabel("Camino o monto en bicicleta").check();
+  await page.getByLabel("¿Cuándo? (opcional)").first().fill("Después de almorzar");
+  await page.getByLabel("Como frutas y verduras todos los días").check();
+  await page.getByLabel(/Qué quieres lograr/).fill("Llegar a los 80 con energía.");
+  for (const option of ["Menos de 1 hora", "Ninguno", "6 a 7", "0 a 1", "Todos los días", "1 a 7", "Alto", "20 minutos"]) {
+    await page.getByText(option, { exact: true }).first().click();
+  }
+  const focus = page.getByRole("group", { name: /Si hiciéramos una sugerencia/ });
+  await focus.getByText("Fuerza", { exact: true }).click();
+  await focus.getByText("Sueño", { exact: true }).click();
+  await snap(page, "02a-lifestyle");
+  await page.getByRole("button", { name: "Guardar y ver sugerencias" }).click();
+  await expect(page).toHaveURL(/\/app\?plan=nuevo$/);
+  await expect(page.getByText("Sumamos lo que ya haces")).toBeVisible();
+  await expect(page.getByText("Caminar o montar en bicicleta").first()).toBeVisible();
+  await expect(page.getByText("Ya lo hacías").first()).toBeVisible();
+  // Nothing new starts on its own: suggestions wait for a yes.
+  await expect(page.getByRole("img", { name: "Hoy: 0 de 2 hábitos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sugerencias para ti" })).toBeVisible();
+  await expect(page.getByText("Mejora de «Caminar o montar en bicicleta»")).toBeVisible();
+  await page.getByRole("listitem").filter({ hasText: "10 sentadillas" }).getByRole("button", { name: "Probar", exact: true }).click();
+  await expect(page.getByRole("img", { name: "Hoy: 0 de 3 hábitos" })).toBeVisible();
+  await page.getByRole("button", { name: "Lo hice" }).first().click();
+  await expect(page.getByRole("img", { name: "Hoy: 1 de 3 hábitos" })).toBeVisible();
+  await expect(page.getByText("1/5 esta semana").first()).toBeVisible();
+  // The game layer: XP for today's habit, a lit streak and the week's missions.
+  await expect(page.getByText("Aprendiz del bosque")).toBeVisible();
+  await expect(page.getByText("+10 hoy")).toBeVisible();
+  await expect(page.getByText("1 día de racha")).toBeVisible();
+  await expect(page.getByText("Misiones de la semana")).toBeVisible();
+  await snap(page, "02b-today");
+  await noHorizontalScroll(page);
+  // "Ahora no" removes the suggestion; the plan will not insist.
+  await page.goto("/app/plan");
+  await page.getByRole("listitem").filter({ hasText: "Camina 30 minutos" }).getByRole("button", { name: "Ahora no" }).click();
+  await expect(page.getByText("Camina 30 minutos")).toHaveCount(0);
+  await expect(page.getByText(/Activos \(3\)/)).toBeVisible();
+});
+
+test("Apple Health link: data arrives on its own and logs the strength habit", async ({ page }) => {
+  await login(page, ANA);
+  // The landing stays reachable when signed in.
+  await page.goto("/inicio");
+  await expect(page.getByRole("heading", { level: 1, name: /Entiende tus exámenes/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ir a mi cuenta" })).toBeVisible();
+  await page.goto("/app");
+  await page.getByRole("link", { name: /Usas Strava, Garmin o Apple Watch/ }).click();
+  await expect(page).toHaveURL(/\/app\/conexiones$/);
+  await page.getByRole("button", { name: "Crear mi enlace de Apple Salud" }).click();
+  const url = await page.getByLabel("Tu enlace personal").inputValue();
+  expect(url).toMatch(/\/api\/ingest\/[A-Za-z0-9_-]{20,}$/);
+  await snap(page, "02c-devices");
+  await noHorizontalScroll(page);
+
+  // What Health Auto Export posts (REST API automation, grouped by day).
+  const today = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  const payload = {
+    data: {
+      metrics: [
+        { name: "step_count", units: "count", data: [{ date: `${today} 00:00:00 -0500`, qty: 8000 }] },
+        { name: "sleep_analysis", units: "hr", data: [{ date: `${today} 00:00:00 -0500`, totalSleep: 6.5 }] },
+      ],
+      workouts: [{ name: "Traditional Strength Training", start: `${today} 18:00:00 -0500` }],
+    },
+  };
+  const ingestPath = new URL(url).pathname;
+  const res = await page.request.post(ingestPath, { data: payload });
+  expect(res.status()).toBe(200);
+  // Walking was logged by hand earlier; the strength habit is logged by the data.
+  expect(await res.json()).toEqual({ ok: true, stored: 2, habits_logged: 1 });
+  // Re-sending the same day is idempotent.
+  expect(await (await page.request.post(ingestPath, { data: payload })).json()).toEqual({ ok: true, stored: 2, habits_logged: 0 });
+  expect((await page.request.post("/api/ingest/not-a-real-token-123456789", { data: payload })).status()).toBe(404);
+
+  await page.goto("/app");
+  await expect(page.getByRole("img", { name: "Hoy: 2 de 3 hábitos" })).toBeVisible();
+  await expect(page.getByText("Registrado con Apple Salud")).toBeVisible();
+  await expect(page.getByText("Tus datos de la semana")).toBeVisible();
+  await expect(page.getByText("8.000").first()).toBeVisible();
+  await page.goto("/app/conexiones");
+  await expect(page.getByText(/Últimos datos recibidos/)).toBeVisible();
+
+  // Progress: character sheet, badges unlocked by what Ana already did.
+  await page.getByRole("link", { name: "Personaje" }).first().click();
+  await expect(page).toHaveURL(/\/app\/progreso$/);
+  await expect(page.getByRole("heading", { name: "Insignias" })).toBeVisible();
+  await expect(page.getByText("Primer paso")).toBeVisible();
+  await expect(page.getByText("Conectado", { exact: true })).toBeVisible();
+  await snap(page, "02d-progress");
+  await noHorizontalScroll(page);
+  // Everything about you lives under Personaje: health record, devices and data are tabs.
+  await page.getByRole("navigation", { name: "Personaje" }).getByRole("link", { name: "Salud" }).click();
+  await expect(page).toHaveURL(/\/app\/examenes$/);
+  await page.getByRole("navigation", { name: "Salud" }).getByRole("link", { name: "Metas" }).click();
+  await expect(page).toHaveURL(/\/app\/metas$/);
+  await expect(page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: "Personaje" })).toHaveAttribute("aria-current", "page");
+  await page.getByRole("navigation", { name: "Personaje" }).getByRole("link", { name: "Dispositivos" }).click();
+  await expect(page).toHaveURL(/\/app\/conexiones$/);
+  await noHorizontalScroll(page);
+
+  // The path of a habit and the quests page.
+  await page.getByRole("link", { name: "Camino" }).first().click();
+  await expect(page.getByText(/^Prueba:/)).toBeVisible();
+  await expect(page.getByText(/^Esta semana · \d\/\d$/)).toBeVisible();
+  await snap(page, "02e-path");
+  await noHorizontalScroll(page);
+  await page.getByRole("link", { name: "Misiones" }).first().click();
+  await expect(page.getByText("Jefe final: examen de control")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Misiones épicas: tus metas" })).toBeVisible();
+  await noHorizontalScroll(page);
+
+  // Logging the last habits of the day opens the celebration.
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Lo hice" }).first().click();
+  await expect(page).toHaveURL(/\/app\/celebracion$/);
+  await expect(page.getByRole("heading", { name: "día de racha" })).toBeVisible();
+  await snap(page, "02f-celebration");
+  await noHorizontalScroll(page);
+  await page.getByRole("link", { name: "Continuar" }).click();
+  await expect(page.getByText(/Día completo: tu racha va en 1 día/)).toBeVisible();
+});
+
+test("engagement: undo a device log, heart score, reminders, sober mode, buddy link, doctor summary", async ({ page, browser }) => {
+  await login(page, ANA);
+  // Undoing what the watch logged sticks: re-sending the same data does not log it again.
+  await page.goto("/app");
+  await page.getByRole("listitem").filter({ hasText: "Registrado con Apple Salud" }).getByRole("button", { name: /deshacer/ }).click();
+  await expect(page.getByRole("img", { name: "Hoy: 2 de 3 hábitos" })).toBeVisible();
+  await page.goto("/app/conexiones");
+  const ingestPath = new URL(await page.getByLabel("Tu enlace personal").inputValue()).pathname;
+  const today = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  const again = await page.request.post(ingestPath, { data: { data: { metrics: [], workouts: [{ name: "Traditional Strength Training", start: `${today} 18:00:00 -0500` }] } } });
+  expect(await again.json()).toMatchObject({ ok: true, habits_logged: 0 });
+
+  // Life's Essential 8 on the character sheet, from the lifestyle answers and the watch.
+  await page.goto("/app/progreso");
+  await expect(page.getByRole("heading", { name: "Esencial 8 del corazón" })).toBeVisible();
+  await expect(page.getByText(/Calculado con \d de 8/)).toBeVisible();
+
+  // Reminder time per habit, on the path.
+  await page.goto("/app/camino");
+  await page.getByLabel("Recordarme a las").fill("07:15");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.reload();
+  await expect(page.getByLabel("Recordarme a las")).toHaveValue("07:15");
+  // The reminder cron refuses calls without its secret.
+  expect((await page.request.post("/api/cron/reminders")).status()).toBe(401);
+
+  // Sober mode hides XP and levels; turning it off brings them back.
+  await page.goto("/app/datos");
+  // Headless Chromium always reports notifications as blocked, so only the card is checked here.
+  await expect(page.getByRole("heading", { name: "Recordatorios" })).toBeVisible();
+  await page.getByLabel(/Modo sobrio/).check();
+  await page.getByRole("button", { name: "Guardar preferencias" }).click();
+  await expect(page.getByText("Preferencias guardadas.")).toBeVisible();
+  await page.goto("/app");
+  await expect(page.getByText(/^\+10 XP$/)).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Tu nivel" })).toHaveCount(0);
+  await snap(page, "02g-sober");
+  await page.goto("/app/datos");
+  await page.getByLabel(/Modo sobrio/).uncheck();
+  await page.getByRole("button", { name: "Guardar preferencias" }).click();
+  await expect(page.getByText("Preferencias guardadas.")).toBeVisible();
+
+  // Buddy link: consistency only, revocable.
+  await page.getByRole("button", { name: "Crear enlace para mi acompañante" }).click();
+  const shareUrl = await page.getByLabel("Enlace para tu acompañante").inputValue();
+  expect(shareUrl).toMatch(/\/compartir\/[0-9a-f]{32}$/);
+  const buddy = await browser.newPage();
+  await buddy.goto(new URL(shareUrl).pathname);
+  await expect(buddy.getByRole("heading", { name: "Ana" })).toBeVisible();
+  await expect(buddy.getByText("Acompañando a")).toBeVisible();
+  await expect(buddy.getByText(/mg\/dL|Glucosa|presión/i)).toHaveCount(0);
+  await snap(buddy, "02h-buddy");
+  await page.getByRole("button", { name: "Dejar de compartir" }).click();
+  await expect(page.getByRole("button", { name: "Crear enlace para mi acompañante" })).toBeVisible();
+  await buddy.reload();
+  await expect(buddy.getByText("Acompañando a")).toHaveCount(0);
+  await buddy.close();
+
+  // A one-page summary for the doctor.
+  await page.getByRole("navigation", { name: "Personaje" }).getByRole("link", { name: "Salud" }).click();
+  await page.getByRole("navigation", { name: "Salud" }).getByRole("link", { name: "Para tu médico" }).click();
+  await expect(page).toHaveURL(/\/app\/resumen$/);
+  await expect(page.getByText(/Resumen para consulta/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hábitos en curso" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Imprimir o guardar PDF" })).toBeVisible();
+  await snap(page, "02i-doctor-summary");
+  await noHorizontalScroll(page);
+});
+
+test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {
+  await login(page, ANA);
+  await page.goto("/app/mediciones");
+  await snap(page, "02-measurements");
+  await page.getByLabel("Sistólica (alta)").fill("186");
+  await page.getByLabel("Diastólica (baja)").fill("96");
+  await page.getByRole("button", { name: "Guardar medición" }).click();
+  await expect(page.getByText("⚠️ Atención inmediata")).toBeVisible();
+  await expect(page.getByText(/rango de crisis/)).toBeVisible();
+  await expect(page.getByText("Emergencias en Colombia: línea 123.")).toBeVisible();
+});
+
+test("weekly check-in with an alarm symptom escalates; the form fits a phone", async ({ page }) => {
+  await login(page, ANA);
+  await page.goto("/app/checkin");
+  await noHorizontalScroll(page);
+  const started = Date.now();
+  await page.getByLabel("Peso (kg)").fill("88");
+  await page.getByLabel("Cintura (cm)").fill("98");
+  // Sleep came from Apple Health this week, so it is not asked again.
+  await expect(page.getByText(/Esto ya lo tenemos de tu reloj: sueño 6,5 h/)).toBeVisible();
+  await expect(page.getByLabel("Sueño promedio (h)")).toHaveCount(0);
+  await page.getByLabel("Dolor u opresión en el pecho").check();
+  await page.getByLabel("¿Qué fue lo más difícil esta semana?").fill("Mucho trabajo, poco ejercicio.");
+  await snap(page, "03-checkin-form");
+  await page.getByRole("button", { name: /Enviar check-in/ }).click();
+  await expect(page.getByText("⚠️ Atención inmediata")).toBeVisible();
+  await snap(page, "04-checkin-urgency");
+  await expect(page.getByText(/Recibimos tu check-in/)).toBeVisible();
+  expect(Date.now() - started).toBeLessThan(120_000);
+});
+
+test("lab PDF: upload → masked extraction → automatic timeline and report; operator can correct later", async ({ page }) => {
+  const pdf = path.join(mkdtempSync(path.join(tmpdir(), "bombadil-")), "examen.pdf");
+  makeLabPdf(pdf);
+
+  await login(page, ANA);
+  await page.goto("/app/examenes");
+  await page.getByLabel("Archivo PDF del laboratorio").setInputFiles(pdf);
+  await page.getByRole("button", { name: "Subir examen" }).click();
+  // The upload lands on the exam page, which follows the analysis until the plan is ready.
+  await expect(page.getByText(/Analizando tu examen|Tus resultados/).first()).toBeVisible();
+  await expect(page.getByText("Qué significa y qué hacer")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Glucosa en ayunas/).first()).toBeVisible();
+  await expect(async () => {
+    await page.goto("/app/linea-de-tiempo");
+    await expect(page.getByText("Colesterol HDL")).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+  await page.getByRole("link", { name: /Glucosa en ayunas/ }).click();
+  // 5.7 mmol/L converted to canonical mg/dL.
+  await expect(page.getByText("102,7").filter({ visible: true }).first()).toBeVisible();
+  await snap(page, "07-marker-detail");
+  await noHorizontalScroll(page);
+  await expect(async () => {
+    await page.goto("/app/informes");
+    await expect(page.getByText(/patrón compatible con resistencia a la insulina/)).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+  await logout(page);
+
+  await login(page, ADMIN);
+  await page.goto("/admin/documentos?all=1");
+  await page.getByRole("link", { name: /examen\.pdf|Laboratorio Sintético/ }).first().click();
+  await page.waitForURL(/\/admin\/documentos\/[0-9a-f-]{36}$/);
+  await expect(page.getByText("Glicemia basal")).toBeVisible();
+  await expect(page.getByText(/datos enmascarados/)).toBeVisible();
+  // Ferritin is not in the catalog → not stored automatically, and listed for the operator;
+  // the review table now shows the 4 stored results.
+  await expect(page.getByText(/Sin guardar.*Ferritina/)).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Incluir fila 4" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Incluir fila 5" })).toHaveCount(0);
+  await noHorizontalScroll(page);
+  await page.getByRole("button", { name: /Confirmar revisión/ }).click();
+  await expect(page.getByText(/Guardados 4 resultados/)).toBeVisible();
+});
+
+test("imaging report: upload → masked plain-language interpretation the participant can open", async ({ page }) => {
+  const pdf = path.join(mkdtempSync(path.join(tmpdir(), "bombadil-")), "resonancia.pdf");
+  makeImagingPdf(pdf);
+
+  await login(page, ANA);
+  await page.goto("/app/examenes");
+  await page.getByLabel("Archivo PDF del laboratorio").setInputFiles(pdf);
+  await page.getByRole("button", { name: "Subir examen" }).click();
+  await expect(page.getByText("Meniscopatía grado II del menisco medial")).toBeVisible({ timeout: 30_000 });
+  await expect(async () => {
+    await page.goto("/app/examenes");
+    await expect(page.getByRole("link", { name: "Resonancia magnética · Rodilla izquierda" })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+  await expect(page.getByText("Interpretado")).toBeVisible();
+  await page.getByRole("link", { name: "Resonancia magnética · Rodilla izquierda" }).click();
+  await expect(page.getByText("Meniscopatía grado II del menisco medial")).toBeVisible();
+  await expect(page.getByText(/Qué ejercicios me convienen/)).toBeVisible();
+  await snap(page, "07b-imaging");
+  await noHorizontalScroll(page);
+});
+
+test("the operator can still draft, edit and publish a report by hand", async ({ page }) => {
+  await login(page, ADMIN);
+  await page.goto("/admin/participantes");
+  await page.getByRole("link", { name: "Ana Prueba" }).click();
+  await page.getByRole("button", { name: "Generar borrador de informe" }).click();
+  await expect(page.getByRole("heading", { name: "Informe" })).toBeVisible();
+  await page.getByLabel("Cierre").fill("Pocas cosas, bien hechas. Revisado por el operador.");
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Aprobar y publicar" }).click();
+  await expect(page.getByText(/Informe aprobado y publicado/)).toBeVisible();
+
+  await page.goto("/admin/checkins");
+  await expect(page.getByRole("button", { name: "Enviar al participante" })).toBeVisible();
+  await page.getByRole("button", { name: "Enviar al participante" }).click();
+  await expect(page.getByText(/✓ Enviada/)).toBeVisible();
+  await logout(page);
+
+  await login(page, ANA);
+  await expect(page.getByText("Caminar 30 minutos después del almuerzo, 5 días")).toBeVisible();
+  await expect(page.getByText(/Semana sólida con la caminata/)).toBeVisible();
+  await snap(page, "08-participant-home");
+  await page.goto("/app/linea-de-tiempo");
+  await snap(page, "06-timeline");
+  await page.goto("/app/informes");
+  await expect(page.getByText("Revisado por el operador.")).toBeVisible();
+  await snap(page, "09-report");
+});
+
+test("another participant cannot open Ana's PDF", async ({ page }) => {
+  await login(page, ADMIN);
+  await page.goto("/admin/documentos?all=1");
+  const href = await page.getByRole("link", { name: /Laboratorio Sintético/ }).first().getAttribute("href");
+  const docId = href!.split("/").pop();
+  await logout(page);
+
+  await onboard(page, BETO);
+  const res = await page.request.get(`/app/examenes/${docId}/pdf`, { maxRedirects: 0 });
+  expect(res.status()).toBe(404);
+});
+
+test("operator views are audit-logged; dashboard shows the pilot", async ({ page }) => {
+  await login(page, ADMIN);
+  await expect(page.getByText("Retención por semana")).toBeVisible();
+  await snap(page, "10-admin-dashboard");
+  await page.goto("/admin/auditoria");
+  await expect(page.getByRole("cell", { name: "view_participant" }).first()).toBeVisible();
+  await expect(page.getByRole("cell", { name: "review_lab" }).first()).toBeVisible();
+  await page.goto("/admin/alertas");
+  await expect(page.getByText("symptom:chest_pain")).toBeVisible();
+});
+
+test("participant exports and then deletes all their data", async ({ page }) => {
+  await login(page, ANA);
+  await page.goto("/app/datos");
+  const download = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Descargar (JSON)" }).click();
+  const file = await (await download).path();
+  const data = JSON.parse(readFileSync(file!, "utf8"));
+  expect(data.lab_results.length).toBe(4);
+  expect(data.consents.length).toBe(1);
+
+  await page.getByLabel("Escribe ELIMINAR para confirmar").fill("ELIMINAR");
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Eliminar mi cuenta y todos mis datos" }).click();
+  await expect(page).toHaveURL(/\/login/);
+
+  await login(page, ANA, { expectSuccess: false });
+  await expect(page.getByText("Código inválido o vencido")).toBeVisible();
+});

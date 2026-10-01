@@ -1,0 +1,204 @@
+/**
+ * One-shot production deploy: Supabase (already set up with supabase/setup.sql)
+ * + Vercel project linked to GitHub, env vars, deploy, auth URLs, /estado check.
+ *
+ * Needs in the environment (never pasted into chat):
+ *   VERCEL_TOKEN                 Vercel *account* token (Account Settings → Tokens; NOT an AI Gateway `vck_` key)
+ *   SUPABASE_ACCESS_TOKEN        Supabase account token (`sbp_…`)
+ *   BOMBADIL_ANTHROPIC_API_KEY   Anthropic key (`sk-ant-…`), passed to Vercel as ANTHROPIC_API_KEY
+ * Optional:
+ *   SUPABASE_PROJECT_REF (default: the pilot project), GIT_REPO, GIT_BRANCH, VERCEL_PROJECT
+ *
+ * Usage: npx tsx scripts/deploy-vercel.ts
+ */
+
+const SUPABASE_REF = process.env.SUPABASE_PROJECT_REF ?? "imwsoftnxhrhazgranay";
+const GIT_REPO = process.env.GIT_REPO ?? "felipegarzonc/7kingdomslabs";
+const GIT_BRANCH = process.env.GIT_BRANCH ?? "claude/bombadil-longevity-coach-ef7aiv";
+const PROJECT = process.env.VERCEL_PROJECT ?? "bombadil";
+
+const vt = need("VERCEL_TOKEN");
+const st = need("SUPABASE_ACCESS_TOKEN");
+const anthropicKey = process.env.BOMBADIL_ANTHROPIC_API_KEY?.trim() ?? "";
+// Optional: a Strava API app (strava.com/settings/api) with callback domain = the site's domain.
+const stravaId = process.env.STRAVA_CLIENT_ID?.trim() ?? "";
+const stravaSecret = process.env.STRAVA_CLIENT_SECRET?.trim() ?? "";
+const resendKey = process.env.RESEND_API_KEY?.trim() ?? "";
+
+function need(name: string): string {
+  const v = process.env[name]?.trim();
+  if (!v) fail(`Falta ${name} en el entorno.`);
+  return v!;
+}
+function fail(msg: string): never {
+  console.error(`✗ ${msg}`);
+  process.exit(1);
+}
+const step = (msg: string) => console.log(`→ ${msg}`);
+
+async function api<T>(base: string, token: string, path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(base + path, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
+  });
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : {};
+  if (!res.ok) throw Object.assign(new Error(`${init.method ?? "GET"} ${path} → ${res.status}: ${JSON.stringify(body.error ?? body.message ?? body).slice(0, 400)}`), { status: res.status, body });
+  return body as T;
+}
+
+async function main() {
+  if (vt.startsWith("vck_")) fail("VERCEL_TOKEN es una llave de AI Gateway (vck_…). Crea un token en vercel.com/account/settings/tokens.");
+  if (!anthropicKey.startsWith("sk-ant-")) console.warn("! BOMBADIL_ANTHROPIC_API_KEY falta o no empieza por sk-ant-: la app funcionará, pero sin leer PDFs ni generar informes.");
+
+  // ── Supabase keys ──
+  step("Leyendo llaves del proyecto Supabase");
+  const keys = await api<Array<{ name: string; api_key: string }>>("https://api.supabase.com", st, `/v1/projects/${SUPABASE_REF}/api-keys?reveal=true`);
+  const anon = keys.find((k) => k.name === "anon")?.api_key;
+  const service = keys.find((k) => k.name === "service_role")?.api_key;
+  if (!anon || !service) fail("No encontré las llaves anon/service_role del proyecto Supabase.");
+  const supabaseUrl = `https://${SUPABASE_REF}.supabase.co`;
+
+  // ── Vercel team + project ──
+  const V = "https://api.vercel.com";
+  const user = await api<{ user: { defaultTeamId?: string; username: string } }>(V, vt, "/v2/user");
+  const teamId = user.user.defaultTeamId;
+  const q = teamId ? `?teamId=${teamId}` : "";
+  const qa = teamId ? `&teamId=${teamId}` : "";
+  step(`Cuenta Vercel: ${user.user.username}${teamId ? ` (equipo ${teamId})` : ""}`);
+
+  type Project = { id: string; name: string; link?: { repoId?: number; type?: string } };
+  let project: Project;
+  try {
+    project = await api<Project>(V, vt, `/v9/projects/${PROJECT}${q}`);
+    step(`Proyecto existente: ${project.name}`);
+  } catch (e) {
+    if ((e as { status?: number }).status !== 404) throw e;
+    step("Creando proyecto Vercel vinculado a GitHub");
+    try {
+      project = await api<Project>(V, vt, `/v11/projects${q}`, {
+        method: "POST",
+        body: JSON.stringify({ name: PROJECT, framework: "nextjs", rootDirectory: "bombadil", gitRepository: { type: "github", repo: GIT_REPO } }),
+      });
+    } catch (err) {
+      fail(
+        `No pude crear el proyecto (${(err as Error).message}).\n  Si el error habla de GitHub: instala la app de Vercel en el repo ${GIT_REPO} (vercel.com/new → Import Git Repository → Adjust GitHub App Permissions).\n  Si dice "permission": el token no tiene permisos sobre el equipo.`,
+      );
+    }
+  }
+  await api(V, vt, `/v9/projects/${project.id}${q}`, { method: "PATCH", body: JSON.stringify({ rootDirectory: "bombadil", framework: "nextjs" }) });
+
+  // ── Env vars (upsert) ──
+  const domains = await api<{ domains: Array<{ name: string }> }>(V, vt, `/v9/projects/${project.id}/domains${q}`).catch(() => ({ domains: [] }));
+  let siteUrl = domains.domains[0] ? `https://${domains.domains[0].name}` : `https://${PROJECT}.vercel.app`;
+  const envs: Record<string, { value: string; type: "plain" | "encrypted" | "sensitive" }> = {
+    NEXT_PUBLIC_SUPABASE_URL: { value: supabaseUrl, type: "plain" },
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: { value: anon!, type: "plain" },
+    SUPABASE_SERVICE_ROLE_KEY: { value: service!, type: "sensitive" },
+    NEXT_PUBLIC_SITE_URL: { value: siteUrl, type: "plain" },
+    CHECKIN_AUTO_SEND: { value: "true", type: "plain" },
+  };
+  if (anthropicKey) envs.ANTHROPIC_API_KEY = { value: anthropicKey, type: "sensitive" };
+  if (stravaId && stravaSecret) {
+    envs.STRAVA_CLIENT_ID = { value: stravaId, type: "plain" };
+    envs.STRAVA_CLIENT_SECRET = { value: stravaSecret, type: "sensitive" };
+  }
+  if (resendKey) envs.RESEND_API_KEY = { value: resendKey, type: "sensitive" };
+  const setEnv = async () => {
+    step("Cargando variables de entorno");
+    await api(V, vt, `/v10/projects/${project.id}/env?upsert=true${qa}`, {
+      method: "POST",
+      body: JSON.stringify(Object.entries(envs).map(([key, v]) => ({ key, value: v.value, type: v.type, target: ["production", "preview"] }))),
+    });
+  };
+  await setEnv();
+
+  // ── Deploy ──
+  const deploy = async () => {
+    step(`Publicando rama ${GIT_BRANCH}`);
+    const repoId = project.link?.repoId ?? (await api<Project>(V, vt, `/v9/projects/${project.id}${q}`)).link?.repoId;
+    if (!repoId) fail("El proyecto no está vinculado a GitHub (falta repoId).");
+    const d = await api<{ id: string; url: string }>(V, vt, `/v13/deployments${q}`, {
+      method: "POST",
+      body: JSON.stringify({ name: PROJECT, project: project.id, target: "production", gitSource: { type: "github", repoId, ref: GIT_BRANCH } }),
+    });
+    for (let i = 0; i < 90; i++) {
+      await new Promise((r) => setTimeout(r, 10_000));
+      const s = await api<{ readyState: string; alias?: string[] }>(V, vt, `/v13/deployments/${d.id}${q}`);
+      if (s.readyState === "READY") return s;
+      if (s.readyState === "ERROR" || s.readyState === "CANCELED") fail(`El build falló (${s.readyState}). Revisa los logs: https://vercel.com/${user.user.username}/${PROJECT}`);
+      if (i % 3 === 0) step(`  estado: ${s.readyState}`);
+    }
+    fail("La publicación tardó demasiado.");
+  };
+  let ready = await deploy();
+
+  // The production alias is only known after the first deploy.
+  const alias = ready.alias?.find((a) => a.endsWith(".vercel.app") && !a.includes("-git-")) ?? ready.alias?.[0];
+  if (alias && `https://${alias}` !== siteUrl) {
+    siteUrl = `https://${alias}`;
+    envs.NEXT_PUBLIC_SITE_URL.value = siteUrl;
+    await setEnv();
+    ready = await deploy();
+  }
+
+  // ── Supabase auth URLs ──
+  step("Configurando URLs de acceso en Supabase");
+  await api("https://api.supabase.com", st, `/v1/projects/${SUPABASE_REF}/config/auth`, {
+    method: "PATCH",
+    body: JSON.stringify({ site_url: siteUrl, uri_allow_list: `${siteUrl}/auth/confirm,${siteUrl}/**` }),
+  });
+
+  // ── Strava webhook (new activities arrive without waiting for the next visit) ──
+  if (stravaId && stravaSecret) {
+    step("Registrando el webhook de Strava");
+    await ensureStravaWebhook(`${siteUrl}/api/strava/webhook`).catch((e) => console.warn(`  ⚠ Webhook de Strava: ${(e as Error).message}`));
+  }
+
+  // ── Habit reminders: Supabase pg_cron calls the app every 15 minutes ──
+  step("Programando los recordatorios (pg_cron cada 15 minutos)");
+  await scheduleReminders(`${siteUrl}/api/cron/reminders`, service!).catch((e) => console.warn(`  ⚠ Recordatorios: ${(e as Error).message}`));
+
+  // ── Self-check ──
+  step("Revisando /estado");
+  const html = await (await fetch(`${siteUrl}/estado`)).text();
+  const failed = [...html.matchAll(/✗<\/span>\s*(?:<!-- -->)?\s*([^<]+)/g)].map((m) => m[1].trim());
+  console.log(`\n✓ Bombadil publicado: ${siteUrl}`);
+  console.log(failed.length ? `  Pendiente según /estado: ${failed.join(", ")}` : "  /estado: todo en verde.");
+}
+
+/** Must match stravaVerifyToken() in src/lib/strava.ts. */
+async function stravaVerifyToken(): Promise<string> {
+  const { createHash } = await import("node:crypto");
+  return createHash("sha256").update(`bombadil-strava-webhook:${stravaSecret}`).digest("hex").slice(0, 32);
+}
+
+async function ensureStravaWebhook(callbackUrl: string) {
+  const base = "https://www.strava.com/api/v3/push_subscriptions";
+  const auth = new URLSearchParams({ client_id: stravaId, client_secret: stravaSecret });
+  const existing = (await (await fetch(`${base}?${auth}`)).json()) as Array<{ id: number; callback_url: string }>;
+  if (Array.isArray(existing) && existing.some((s) => s.callback_url === callbackUrl)) return step("  ya estaba registrado");
+  for (const s of Array.isArray(existing) ? existing : []) await fetch(`${base}/${s.id}?${auth}`, { method: "DELETE" });
+  const body = new URLSearchParams({ client_id: stravaId, client_secret: stravaSecret, callback_url: callbackUrl, verify_token: await stravaVerifyToken() });
+  const res = await fetch(base, { method: "POST", body });
+  if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
+  step("  registrado");
+}
+
+/** Must match cronSecret() in src/lib/push.ts. */
+async function scheduleReminders(url: string, serviceKey: string) {
+  const { createHash } = await import("node:crypto");
+  const secret = createHash("sha256").update(`bombadil-cron:${serviceKey}`).digest("hex");
+  const lit = (v: string) => `'${v.replace(/'/g, "''")}'`;
+  const query = `
+    create extension if not exists pg_cron;
+    create extension if not exists pg_net;
+    select cron.unschedule(jobid) from cron.job where jobname = 'bombadil-reminders';
+    select cron.schedule('bombadil-reminders', '*/15 * * * *', ${lit(
+      `select net.http_post(url := ${lit(url)}, headers := jsonb_build_object('Authorization', ${lit(`Bearer ${secret}`)}, 'Content-Type', 'application/json'), body := '{}'::jsonb)`,
+    )});`;
+  await api("https://api.supabase.com", st, `/v1/projects/${SUPABASE_REF}/database/query`, { method: "POST", body: JSON.stringify({ query }) });
+  step("  programados");
+}
+
+main().catch((e) => fail(e instanceof Error ? e.message : String(e)));

@@ -1,0 +1,33 @@
+name: bombadil
+
+on:
+  push:
+    paths: ["bombadil/**", ".github/workflows/bombadil.yml"]
+  pull_request:
+    paths: ["bombadil/**", ".github/workflows/bombadil.yml"]
+
+defaults:
+  run:
+    working-directory: bombadil
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: bombadil/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - name: Migrations + RLS tests (throwaway Postgres)
+        run: npm run test:db
+      - name: End-to-end (Postgres + PostgREST + fakes)
+        run: |
+          curl -sSL https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz | tar -xJ -C /tmp
+          npx playwright install --with-deps chromium
+          POSTGREST_BIN=/tmp/postgrest npm run test:e2e

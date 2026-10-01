@@ -1,0 +1,342 @@
+{
+  "version": "2026-10-01",
+  "status": "PENDIENTE DE VALIDAR con médico asesor. Valores tomados de guías reconocidas como placeholder; cada regla cita su fuente.",
+  "levels": {
+    "urgency": "Urgencia: mostrar de inmediato, indicar acudir a urgencias y notificar al admin.",
+    "consult_soon": "Consultar pronto: pedir cita médica en los próximos días.",
+    "next_visit": "Mencionar en la próxima cita médica."
+  },
+  "rules": [
+    {
+      "id": "bp_crisis_systolic",
+      "level": "urgency",
+      "subject": { "kind": "measurement", "type": "bp_systolic" },
+      "condition": { "gte": 180 },
+      "message": "Tu presión sistólica está en rango de crisis (≥180). Descansa 5 minutos sentado y vuelve a medir. Si sigue igual de alta, o si tienes dolor de pecho, falta de aire, dolor de cabeza intenso, confusión o debilidad, ve a urgencias ahora.",
+      "source": "ACC/AHA 2017 Hypertension Guideline — crisis hipertensiva ≥180/120 mmHg."
+    },
+    {
+      "id": "bp_crisis_diastolic",
+      "level": "urgency",
+      "subject": { "kind": "measurement", "type": "bp_diastolic" },
+      "condition": { "gte": 120 },
+      "message": "Tu presión diastólica está en rango de crisis (≥120). Descansa 5 minutos sentado y vuelve a medir. Si sigue igual de alta, o si tienes síntomas, ve a urgencias ahora.",
+      "source": "ACC/AHA 2017 Hypertension Guideline — crisis hipertensiva ≥180/120 mmHg."
+    },
+    {
+      "id": "symptom_chest_pain",
+      "level": "urgency",
+      "subject": { "kind": "symptom", "symptom": "chest_pain" },
+      "message": "Reportaste dolor en el pecho. Si lo tienes ahora o fue reciente, ve a urgencias o llama al 123.",
+      "source": "Síntoma de alarma cardiovascular (AHA)."
+    },
+    {
+      "id": "symptom_dyspnea",
+      "level": "urgency",
+      "subject": { "kind": "symptom", "symptom": "shortness_of_breath" },
+      "message": "Reportaste dificultad para respirar. Si la tienes ahora o apareció de repente, ve a urgencias o llama al 123.",
+      "source": "Síntoma de alarma cardiorrespiratorio."
+    },
+    {
+      "id": "symptom_neuro",
+      "level": "urgency",
+      "subject": { "kind": "symptom", "symptom": "neurological" },
+      "message": "Reportaste síntomas neurológicos (debilidad o adormecimiento de un lado, dificultad para hablar, pérdida de visión, confusión). Ve a urgencias o llama al 123 de inmediato.",
+      "source": "Signos de alarma de ACV (AHA/ASA, BE-FAST)."
+    },
+    {
+      "id": "bp_stage2_high",
+      "level": "consult_soon",
+      "subject": { "kind": "measurement", "type": "bp_systolic" },
+      "condition": { "gte": 160, "lt": 180 },
+      "message": "Tu presión sistólica está muy elevada (≥160). Pide cita con tu médico en los próximos días y lleva tus registros.",
+      "source": "ESH 2023: HTA grado 2 (160–179 mmHg)."
+    },
+    {
+      "id": "bp_stage2_high_diastolic",
+      "level": "consult_soon",
+      "subject": { "kind": "measurement", "type": "bp_diastolic" },
+      "condition": { "gte": 100, "lt": 120 },
+      "message": "Tu presión diastólica está muy elevada (≥100). Pide cita con tu médico en los próximos días.",
+      "source": "ESH 2023: HTA grado 2 (100–109 mmHg)."
+    },
+    {
+      "id": "hr_rest_extreme",
+      "level": "consult_soon",
+      "subject": { "kind": "measurement", "type": "resting_hr" },
+      "condition": { "outside": [40, 120] },
+      "message": "Tu frecuencia cardiaca en reposo está fuera de lo esperado. Vuelve a medir en reposo; si se repite, consulta pronto.",
+      "source": "Placeholder clínico. PENDIENTE."
+    },
+    {
+      "id": "glucose_diabetes_range",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "glucose_fasting" },
+      "condition": { "gte": 126 },
+      "message": "Tu glucosa en ayunas está en el rango que requiere confirmar diabetes. Conviene consultar pronto con tu médico.",
+      "source": "ADA Standards of Care 2025: glucosa en ayunas ≥126 mg/dL."
+    },
+    {
+      "id": "hba1c_diabetes_range",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "hba1c" },
+      "condition": { "gte": 6.5 },
+      "message": "Tu HbA1c está en el rango que requiere confirmar diabetes. Conviene consultar pronto con tu médico.",
+      "source": "ADA Standards of Care 2025: HbA1c ≥6.5 %."
+    },
+    {
+      "id": "ldl_very_high",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "ldl" },
+      "condition": { "gte": 190 },
+      "message": "Tu LDL está muy alto (≥190). Vale la pena consultar pronto: a este nivel las guías sugieren evaluación médica.",
+      "source": "ACC/AHA 2018 Cholesterol Guideline: LDL ≥190 mg/dL."
+    },
+    {
+      "id": "tg_very_high",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "triglycerides" },
+      "condition": { "gte": 500 },
+      "message": "Tus triglicéridos están muy altos (≥500). Consulta pronto con tu médico.",
+      "source": "NCEP ATP III: ≥500 mg/dL muy alto (riesgo de pancreatitis)."
+    },
+    {
+      "id": "alt_3x",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "alt" },
+      "condition": { "gte": 120 },
+      "message": "Tu ALT está más de 3 veces por encima del límite habitual. Conviene consultar pronto.",
+      "source": "ACG 2017 (Kwo et al.): elevaciones >3× LSN requieren evaluación."
+    },
+    {
+      "id": "ast_3x",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "ast" },
+      "condition": { "gte": 120 },
+      "message": "Tu AST está más de 3 veces por encima del límite habitual. Conviene consultar pronto.",
+      "source": "ACG 2017 (Kwo et al.)."
+    },
+    {
+      "id": "hscrp_acute",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "hscrp" },
+      "condition": { "gt": 10 },
+      "message": "Tu PCR está por encima de 10 mg/L, lo que suele indicar un proceso inflamatorio agudo. Coméntalo pronto con tu médico.",
+      "source": "AHA/CDC 2003 (Pearson et al.)."
+    },
+    {
+      "id": "tsh_extreme",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "tsh" },
+      "condition": { "outside": [0.1, 10] },
+      "message": "Tu TSH está claramente fuera de rango. Conviene consultar pronto.",
+      "source": "ATA — placeholder. PENDIENTE."
+    },
+    {
+      "id": "hemoglobin_low",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "hemoglobin" },
+      "condition": { "lt": 11 },
+      "message": "Tu hemoglobina está baja. Conviene consultar pronto.",
+      "source": "OMS: anemia moderada <11 g/dL. PENDIENTE ajuste por altitud."
+    },
+    {
+      "id": "platelets_extreme",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "platelets" },
+      "condition": { "outside": [100, 600] },
+      "message": "Tu recuento de plaquetas está claramente fuera de rango. Conviene consultar pronto.",
+      "source": "Placeholder clínico. PENDIENTE."
+    },
+    {
+      "id": "wbc_extreme",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "wbc" },
+      "condition": { "outside": [3, 15] },
+      "message": "Tus leucocitos están claramente fuera de rango. Conviene consultar pronto.",
+      "source": "Placeholder clínico. PENDIENTE."
+    },
+    {
+      "id": "uacr_a3",
+      "level": "consult_soon",
+      "subject": { "kind": "biomarker", "code": "uacr" },
+      "condition": { "gt": 300 },
+      "message": "Tu relación albúmina/creatinina está muy elevada. Conviene consultar pronto.",
+      "source": "KDIGO 2024: A3 >300 mg/g."
+    },
+    {
+      "id": "fib4_high",
+      "level": "consult_soon",
+      "subject": { "kind": "derived", "metric": "fib4" },
+      "condition": { "gt": 2.67 },
+      "message": "Tu índice FIB-4 (calculado con edad, AST, ALT y plaquetas) está en rango alto para fibrosis hepática. Pide una cita médica en los próximos días para confirmarlo con una elastografía o con hepatología.",
+      "source": "Guía EASL-EASD-EASO 2024 (MASLD): FIB-4 >2.67 → valoración por hepatología."
+    },
+    {
+      "id": "keyword_alarm_text",
+      "level": "consult_soon",
+      "subject": {
+        "kind": "keyword",
+        "keywords": ["dolor en el pecho", "dolor de pecho", "opresion en el pecho", "falta de aire", "no puedo respirar", "me ahogo", "desmayo", "me desmaye", "perdi el conocimiento", "adormecimiento", "no puedo hablar", "vision borrosa de repente", "palpitaciones fuertes"]
+      },
+      "message": "Mencionaste algo que podría ser un síntoma de alarma. Si lo tienes ahora, ve a urgencias o llama al 123. El equipo revisará tu mensaje.",
+      "source": "Detección por palabras clave (determinista). Puede tener falsos positivos: siempre revisa el admin."
+    },
+    {
+      "id": "bp_stage1",
+      "level": "next_visit",
+      "subject": { "kind": "measurement", "type": "bp_systolic" },
+      "condition": { "gte": 140, "lt": 160 },
+      "message": "Tu presión sistólica está en rango de hipertensión. Llévale tus registros a tu médico en la próxima cita.",
+      "source": "ESH 2023: HTA grado 1 (140–159 mmHg)."
+    },
+    {
+      "id": "bp_stage1_diastolic",
+      "level": "next_visit",
+      "subject": { "kind": "measurement", "type": "bp_diastolic" },
+      "condition": { "gte": 90, "lt": 100 },
+      "message": "Tu presión diastólica está en rango de hipertensión. Llévale tus registros a tu médico en la próxima cita.",
+      "source": "ESH 2023: HTA grado 1 (90–99 mmHg)."
+    },
+    {
+      "id": "glucose_prediabetes",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "glucose_fasting" },
+      "condition": { "gte": 100, "lt": 126 },
+      "message": "Tu glucosa en ayunas está en rango de prediabetes. Menciónalo en tu próxima cita.",
+      "source": "ADA Standards of Care 2025."
+    },
+    {
+      "id": "hba1c_prediabetes",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "hba1c" },
+      "condition": { "gte": 5.7, "lt": 6.5 },
+      "message": "Tu HbA1c está en rango de prediabetes. Menciónalo en tu próxima cita.",
+      "source": "ADA Standards of Care 2025."
+    },
+    {
+      "id": "ldl_high",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "ldl" },
+      "condition": { "gte": 160, "lt": 190 },
+      "message": "Tu LDL está alto. Menciónalo en tu próxima cita.",
+      "source": "NCEP ATP III: 160–189 mg/dL alto."
+    },
+    {
+      "id": "tg_high",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "triglycerides" },
+      "condition": { "gte": 200, "lt": 500 },
+      "message": "Tus triglicéridos están altos. Menciónalo en tu próxima cita.",
+      "source": "NCEP ATP III: 200–499 mg/dL alto."
+    },
+    {
+      "id": "hdl_low_male",
+      "level": "next_visit",
+      "sex": "male",
+      "subject": { "kind": "biomarker", "code": "hdl" },
+      "condition": { "lt": 40 },
+      "message": "Tu HDL está bajo. Menciónalo en tu próxima cita.",
+      "source": "NCEP ATP III."
+    },
+    {
+      "id": "hdl_low_female",
+      "level": "next_visit",
+      "sex": "female",
+      "subject": { "kind": "biomarker", "code": "hdl" },
+      "condition": { "lt": 50 },
+      "message": "Tu HDL está bajo. Menciónalo en tu próxima cita.",
+      "source": "NCEP ATP III."
+    },
+    {
+      "id": "alt_above_ref",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "alt" },
+      "condition": { "gt": 40, "lt": 120 },
+      "message": "Tu ALT está por encima del rango de referencia. Menciónalo en tu próxima cita.",
+      "source": "ACG 2017 (Kwo et al.)."
+    },
+    {
+      "id": "vitd_deficient",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "vitamin_d" },
+      "condition": { "lt": 20 },
+      "message": "Tu vitamina D está en rango de deficiencia. Menciónalo en tu próxima cita.",
+      "source": "Endocrine Society 2011: <20 ng/mL deficiencia."
+    },
+    {
+      "id": "b12_low",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "vitamin_b12" },
+      "condition": { "lt": 200 },
+      "message": "Tu vitamina B12 está baja. Menciónalo en tu próxima cita.",
+      "source": "Rango típico de laboratorio."
+    },
+    {
+      "id": "uacr_a2",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "uacr" },
+      "condition": { "gte": 30, "lte": 300 },
+      "message": "Tu relación albúmina/creatinina está elevada. Menciónalo en tu próxima cita.",
+      "source": "KDIGO 2024: A2 30–300 mg/g."
+    },
+    {
+      "id": "hscrp_high",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "hscrp" },
+      "condition": { "gt": 3, "lte": 10 },
+      "message": "Tu PCR ultrasensible está en rango de riesgo cardiovascular alto. Menciónalo en tu próxima cita.",
+      "source": "AHA/CDC 2003 (Pearson et al.)."
+    },
+    {
+      "id": "uric_acid_high",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "uric_acid" },
+      "condition": { "gt": 7 },
+      "message": "Tu ácido úrico está alto. Menciónalo en tu próxima cita.",
+      "source": "Rango típico de laboratorio."
+    },
+    {
+      "id": "fib4_indeterminate",
+      "level": "next_visit",
+      "ageMax": 65,
+      "subject": { "kind": "derived", "metric": "fib4" },
+      "condition": { "gte": 1.3, "lte": 2.67 },
+      "message": "Tu índice FIB-4 está en zona intermedia (1,3–2,67). No es un diagnóstico; conviene mencionarlo en tu próxima cita para decidir si hace falta una elastografía hepática.",
+      "source": "Guía EASL-EASD-EASO 2024 (MASLD): FIB-4 1.3–2.67 (≤65 años) → elastografía (VCTE)."
+    },
+    {
+      "id": "fib4_indeterminate_over65",
+      "level": "next_visit",
+      "ageMin": 66,
+      "subject": { "kind": "derived", "metric": "fib4" },
+      "condition": { "gte": 2.0, "lte": 2.67 },
+      "message": "Tu índice FIB-4 está en zona intermedia para tu edad (2,0–2,67). No es un diagnóstico; conviene mencionarlo en tu próxima cita para decidir si hace falta una elastografía hepática.",
+      "source": "Guía EASL-EASD-EASO 2024 (MASLD): en mayores de 65 el corte inferior sube a 2.0."
+    },
+    {
+      "id": "apob_high",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "apob" },
+      "condition": { "gte": 130 },
+      "message": "Tu ApoB está alta (≥130 mg/dL). Coméntala en tu próxima cita: junto con el LDL define tu riesgo cardiovascular y si necesitas tratamiento.",
+      "source": "Guías ESC/EAS 2019: ApoB como meta secundaria (<100 mg/dL en riesgo moderado). Umbral de aviso PENDIENTE DE VALIDAR."
+    },
+    {
+      "id": "lpa_high",
+      "level": "next_visit",
+      "subject": { "kind": "biomarker", "code": "lpa" },
+      "condition": { "gt": 50 },
+      "message": "Tu Lp(a) está elevada (>50 mg/dL). Es mayormente heredada y no cambia con hábitos; menciónala en tu próxima cita, porque sube tu riesgo cardiovascular y hace más importante controlar el LDL y la presión. Vale la pena que tus familiares directos también se la midan.",
+      "source": "Consenso EAS sobre Lp(a) (Kronenberg et al., Eur Heart J 2022): >50 mg/dL (~105 nmol/L) aumenta el riesgo."
+    },
+    {
+      "id": "alcohol_high",
+      "level": "next_visit",
+      "subject": { "kind": "measurement", "type": "alcohol_drinks" },
+      "condition": { "gt": 14 },
+      "message": "Reportaste más de 14 tragos en la semana. El riesgo empieza a subir desde unos 7 tragos semanales; si es tu consumo habitual, coméntalo en tu próxima cita.",
+      "source": "Wood et al., Lancet 2018 (599.912 bebedores): riesgo mínimo por debajo de ~100 g de alcohol/semana. Umbral de aviso PENDIENTE DE VALIDAR."
+    }
+  ]
+}

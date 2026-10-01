@@ -46,6 +46,8 @@ export ANTHROPIC_BASE_URL="http://127.0.0.1:54322"
 export ANTHROPIC_API_KEY="fake"
 export NEXT_PUBLIC_SITE_URL="http://127.0.0.1:3100"
 export E2E_PG_URL="$PG_URL"
+# Exercise the operator review path for check-in replies (production sends them right away).
+export CHECKIN_AUTO_SEND=false
 
 if curl -s -o /dev/null http://127.0.0.1:3100 2>/dev/null; then echo "port 3100 already in use"; exit 1; fi
 npx next build >"$DIR/build.log" 2>&1 || { tail -40 "$DIR/build.log"; exit 1; }

@@ -206,6 +206,15 @@ const IMAGING = {
   impression: "Desgaste leve del menisco y tendinosis patelar.",
   questions_for_doctor: ["¿Qué ejercicios me convienen mientras sana el tendón?", "¿Necesito control con otra resonancia?"],
 };
+const HABIT_PLAN = {
+  message: "Empezamos con tres hábitos pequeños anclados a tu rutina.",
+  habits: [
+    { pillar: "movimiento", title: "Camina 10 minutos", tiny: "Ponte los tenis y camina 2 minutos", anchor: "Después de almorzar", why: "Tu meta es llegar a los 80 con energía.", next_step: "Camina 20 minutos, 5 días", target_per_week: 5 },
+    { pillar: "sueno", title: "Pantallas apagadas a las 10 p. m.", tiny: "Deja el celular fuera del cuarto", anchor: "Después de cepillarte los dientes", why: "Duermes 6 a 7 horas.", next_step: "Acostarte a las 10:30 p. m.", target_per_week: 5 },
+    { pillar: "fuerza", title: "10 sentadillas", tiny: "3 sentadillas", anchor: "Después de servir el café", why: "No haces fuerza hoy.", next_step: "2 series de 10", target_per_week: 3 },
+    { pillar: "nutricion", title: "Una fruta en el desayuno", tiny: "Medio banano", anchor: "Al servir el desayuno", why: "Comes 0 a 1 porciones al día.", next_step: "Fruta y verdura en el almuerzo", target_per_week: 5 },
+  ],
+};
 const REPORT = {
   headline: "Tus datos muestran un patrón compatible con resistencia a la insulina que vale la pena atender ahora.",
   worsened: ["HDL bajó a 37 mg/dL.", "Triglicéridos subieron a 231 mg/dL.", "ALT subió a 52 U/L."],
@@ -213,9 +222,10 @@ const REPORT = {
   stable: [],
   connections: "HDL bajando, triglicéridos y ALT subiendo y cintura alta son un mismo cuadro metabólico, no cuatro problemas.",
   priorities: [
-    { title: "Caminar 30 minutos después del almuerzo, 5 días", kind: "must", why: "Mejora triglicéridos y glucosa.", how: "Pon una alarma a la 1:30 p. m." },
-    { title: "Cambiar la gaseosa por agua o tinto sin azúcar", kind: "must", why: "Menos azúcar libre baja los triglicéridos.", how: "Deja la gaseosa solo para el fin de semana." },
+    { title: "Caminar 30 minutos después del almuerzo, 5 días", kind: "must", why: "Mejora triglicéridos y glucosa.", how: "Pon una alarma a la 1:30 p. m.", steps: ["Lunes a viernes, 1:30 p. m.", "Si llueve, sube y baja escaleras 10 minutos"], track: "Registra tus minutos de ejercicio cada semana." },
+    { title: "Cambiar la gaseosa por agua o tinto sin azúcar", kind: "must", why: "Menos azúcar libre baja los triglicéridos.", how: "Deja la gaseosa solo para el fin de semana.", steps: ["Lleva una botella de agua al trabajo"], track: "Repite el perfil lipídico en 3 meses." },
   ],
+  quick_wins: ["Agrega una porción de verdura al almuerzo."],
   see_doctor: "Consulta tu presión arterial y la glucosa en tu próxima cita; lleva tus registros.",
   closing: "Pocas cosas, bien hechas, cada semana.",
 };
@@ -230,6 +240,8 @@ http
       if (leaked) text = JSON.stringify({ error: "PII LEAKED TO LLM" });
       else if (user.includes("RESONANCIA")) text = JSON.stringify({ lab_name: "Centro de Imágenes", sampled_on: "2026-09-24", results: [] });
       else text = JSON.stringify(EXTRACTION);
+    } else if (system.includes("coach de hábitos")) {
+      text = JSON.stringify(HABIT_PLAN);
     } else if (system.includes("informe de imágenes diagnósticas")) {
       text = leaked ? JSON.stringify({ error: "PII LEAKED TO LLM" }) : JSON.stringify(IMAGING);
     } else if (system.includes("informe interpretativo")) text = JSON.stringify(REPORT);

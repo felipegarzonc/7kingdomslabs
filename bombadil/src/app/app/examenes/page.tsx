@@ -39,13 +39,9 @@ export default async function LabsPage() {
                 return (
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                     <div className="min-w-0">
-                      {d.kind === "imaging" && d.imaging ? (
-                        <Link href={`/app/examenes/${d.id}`} className="block truncate font-medium text-accent underline">
-                          {imagingTitle(d.imaging as StoredImaging)}
-                        </Link>
-                      ) : (
-                        <p className="truncate font-medium">{d.lab_name ?? d.original_filename ?? "Examen"}</p>
-                      )}
+                      <Link href={`/app/examenes/${d.id}`} className="block truncate font-medium text-accent underline">
+                        {d.kind === "imaging" && d.imaging ? imagingTitle(d.imaging as StoredImaging) : (d.lab_name ?? d.original_filename ?? "Examen")}
+                      </Link>
                       <p className="text-xs text-muted">
                         {d.kind === "imaging" ? "Estudio" : "Toma"}: {fmtDate(d.sampled_on)} · subido {fmtDate(d.created_at)}
                       </p>

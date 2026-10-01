@@ -9,10 +9,11 @@ export interface CheckinReplyInput {
   goals: Array<{ label: string; status: string; current: number | null; target: number }>;
   alerts: Array<{ level: string; message: string }>;
   freeText: string | null;
+  habits: Array<{ title: string; done_this_week: number; target_per_week: number; streak: { value: number; unit: string }; next_step: string | null; tiny: string | null }>;
 }
 
 export async function generateCheckinReply(input: CheckinReplyInput): Promise<{ text: string; promptVersion: string; model: string }> {
-  const prompt = await loadPrompt("checkin-reply", 2);
+  const prompt = await loadPrompt("checkin-reply", 3);
   const model = llmConfig.model();
   try {
     const msg = await anthropic().beta.messages.create({

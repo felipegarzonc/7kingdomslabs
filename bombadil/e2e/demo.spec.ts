@@ -38,7 +38,7 @@ test("seed demo data", async () => {
 test("participant screens", async ({ page }) => {
   await login(page, EMAIL);
   await page.goto("/app");
-  await expect(page.getByText("Tus prioridades")).toBeVisible();
+  await expect(page.getByText("Tu plan de salud")).toBeVisible();
   await shot(page, "p1-inicio");
   await page.goto("/app/linea-de-tiempo");
   await shot(page, "p2-linea-de-tiempo");

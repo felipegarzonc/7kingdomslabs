@@ -3,6 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GoalRow, LabPoint, MeasurementPoint, SnapshotInput } from "@/domain/snapshot";
 import type { MeasurementType } from "@/domain/types";
 import type { ParticipantRow } from "@/lib/auth";
+import { imagingTitle } from "@/components/imaging-view";
+import type { ImagingForReport } from "@/lib/llm/report";
+import type { StoredImaging } from "@/lib/llm/imaging";
 
 export interface LabResultRow {
   id: string;
@@ -87,4 +90,29 @@ export function toSnapshotInput(participant: ParticipantRow, data: Awaited<Retur
     measurements,
     goals,
   };
+}
+
+/** Interpreted imaging reports, newest first, compacted for the report prompt. */
+export async function loadImagingForReport(supabase: SupabaseClient, participantId: string): Promise<ImagingForReport[]> {
+  const { data, error } = await supabase
+    .from("lab_documents")
+    .select("sampled_on, imaging")
+    .eq("participant_id", participantId)
+    .eq("kind", "imaging")
+    .eq("status", "reviewed")
+    .order("sampled_on", { ascending: false })
+    .limit(5);
+  if (error) throw new Error(error.message);
+  return (data ?? [])
+    .filter((d) => d.imaging)
+    .map((d) => {
+      const i = d.imaging as StoredImaging;
+      return {
+        date: d.sampled_on,
+        study: imagingTitle(i),
+        summary: i.summary,
+        impression: i.impression,
+        notable_findings: i.findings.filter((f) => f.relevance !== "normal").map((f) => `${f.finding}: ${f.explanation}`),
+      };
+    });
 }

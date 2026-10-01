@@ -92,7 +92,7 @@ async function main() {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: { value: anon!, type: "plain" },
     SUPABASE_SERVICE_ROLE_KEY: { value: service!, type: "sensitive" },
     NEXT_PUBLIC_SITE_URL: { value: siteUrl, type: "plain" },
-    CHECKIN_AUTO_SEND: { value: "false", type: "plain" },
+    CHECKIN_AUTO_SEND: { value: "true", type: "plain" },
   };
   if (anthropicKey) envs.ANTHROPIC_API_KEY = { value: anthropicKey, type: "sensitive" };
   const setEnv = async () => {

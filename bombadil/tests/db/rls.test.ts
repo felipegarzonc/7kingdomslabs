@@ -110,7 +110,7 @@ describe.skipIf(!url)("row level security", () => {
     await db?.end();
   });
 
-  const participantTables = ["participants", "consents", "measurements", "lab_documents", "lab_results", "checkins", "reports", "alerts", "checkin_replies"];
+  const participantTables = ["participants", "consents", "measurements", "lab_documents", "lab_results", "checkins", "reports", "alerts", "checkin_replies", "habits", "habit_logs"];
 
   it.each(participantTables)("participant A cannot read B's rows in %s", async (table) => {
     const col = table === "participants" ? "id" : "participant_id";
@@ -149,6 +149,22 @@ describe.skipIf(!url)("row level security", () => {
       await asB(() => q("delete from public.measurements where id = $1", [r.rows[0].id]));
     }
     await expect(asB(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,'steps',1,'x',now())", [ids.pB]))).rejects.toThrow(/check constraint/);
+  });
+
+  it("habits: each participant manages and logs only their own", async () => {
+    const hb = await asB(() => q("insert into public.habits (participant_id,pillar,title,target_per_week,started_on) values ($1,'movimiento','Caminar 10 minutos',5,current_date) returning id", [ids.pB]));
+    const habitB = hb.rows[0].id;
+    await asB(() => q("insert into public.habit_logs (habit_id,participant_id,day) values ($1,$2,current_date)", [habitB, ids.pB]));
+    const mine = await asB(() => q("select count(*)::int as n from public.habit_logs"));
+    expect(mine.rows[0].n).toBe(1);
+    // A can neither see B's habit nor log on it, even claiming to be B or themselves.
+    expect((await asA(() => q("select * from public.habits where id = $1", [habitB]))).rowCount).toBe(0);
+    await expect(asA(() => q("insert into public.habit_logs (habit_id,participant_id,day) values ($1,$2,current_date - 1)", [habitB, ids.pA]))).rejects.toThrow(/row-level security/);
+    await expect(asA(() => q("insert into public.habits (participant_id,pillar,title) values ($1,'sueno','Dormir')", [ids.pB]))).rejects.toThrow(/row-level security/);
+    // Lifestyle answers go through the RPC, only for oneself.
+    await asB(() => q(`select public.update_my_lifestyle('{"sleep_hours":6}'::jsonb, '')`));
+    const p = await asB(() => q("select lifestyle, personal_goal from public.participants"));
+    expect(p.rows[0]).toEqual({ lifestyle: { sleep_hours: 6 }, personal_goal: "meta B" });
   });
 
   it("consent is recorded with version and hash", async () => {

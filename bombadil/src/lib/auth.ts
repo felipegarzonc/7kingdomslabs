@@ -14,6 +14,8 @@ export interface ParticipantRow {
   height_cm: number | null;
   personal_goal: string | null;
   smoking_status: SmokingStatus | null;
+  /** Answers to the lifestyle questionnaire (see src/domain/lifestyle.ts). */
+  lifestyle: unknown;
   priorities: string[];
   pilot_start: string | null;
   status: "invited" | "active" | "withdrawn" | "completed";

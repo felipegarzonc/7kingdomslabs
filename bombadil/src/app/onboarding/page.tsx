@@ -15,7 +15,7 @@ export default async function OnboardingPage() {
   return (
     <PublicShell>
       <h1 className="font-serif text-3xl font-semibold">Bienvenido a Bombadil</h1>
-      <p className="mt-2 mb-8 text-muted">Tres pasos y menos de 5 minutos. Luego podrás subir tus exámenes.</p>
+      <p className="mt-2 mb-8 text-muted">Un minuto: tu autorización y dos datos básicos. Después armamos tu plan de hábitos.</p>
       <OnboardingForm consent={<ConsentText />} />
     </PublicShell>
   );

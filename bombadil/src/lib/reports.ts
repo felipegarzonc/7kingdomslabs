@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildSnapshot } from "@/domain/snapshot";
 import type { ParticipantRow } from "@/lib/auth";
-import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
+import { loadImagingForReport, loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { generateReport } from "@/lib/llm/report";
 
 /**
@@ -15,11 +15,12 @@ export async function publishAutomaticReport(db: SupabaseClient, participantId: 
   const { data: participant } = await db.from("participants").select("*").eq("id", participantId).single();
   if (!participant) return { error: "participant not found" };
   const snapshot = buildSnapshot(toSnapshotInput(participant as ParticipantRow, await loadParticipantData(db, participantId)));
-  if (!snapshot.markers.length) return { error: "no lab results to interpret" };
+  const imaging = await loadImagingForReport(db, participantId);
+  if (!snapshot.markers.length && !imaging.length) return { error: "no lab or imaging results to interpret" };
 
   let draft;
   try {
-    draft = await generateReport(snapshot);
+    draft = await generateReport(snapshot, imaging);
   } catch (e) {
     return { error: e instanceof Error ? e.message : String(e) };
   }

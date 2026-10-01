@@ -16,6 +16,7 @@ export const env = {
     const e = process.env.ANTHROPIC_EFFORT;
     return e === "low" || e === "medium" || e === "high" || e === "xhigh" || e === "max" ? e : "high";
   },
-  checkinAutoSend: () => process.env.CHECKIN_AUTO_SEND === "true",
+  /** Replies reach the participant right away unless explicitly held for operator review. */
+  checkinAutoSend: () => process.env.CHECKIN_AUTO_SEND !== "false",
   alertWebhookUrl: () => process.env.ALERT_WEBHOOK_URL || null,
 };

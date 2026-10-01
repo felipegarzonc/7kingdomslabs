@@ -204,7 +204,7 @@ export async function uploadLab(_prev: ActionState, form: FormData): Promise<Act
 
   after(() => runExtraction(doc.id));
   revalidatePath("/app/examenes");
-  return { ok: true, message: "Examen recibido. En uno o dos minutos verás los resultados en tu línea de tiempo y un informe nuevo." };
+  redirect(`/app/examenes/${doc.id}`);
 }
 
 // ─── Goals ──────────────────────────────────────────────────────────────────

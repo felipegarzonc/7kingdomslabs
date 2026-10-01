@@ -17,13 +17,27 @@ export function ReportView({ content }: { content: ReportContent }) {
               </div>
               <p className="mt-1 text-text/90">{p.why}</p>
               <p className="mt-1">
-                <span className="font-medium">Cómo: </span>
+                <span className="font-medium">Cómo empezar: </span>
                 {p.how}
               </p>
+              {p.steps?.length ? (
+                <ul className="mt-2 flex list-disc flex-col gap-1 pl-5">
+                  {p.steps.map((x, j) => (
+                    <li key={j}>{x}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {p.track ? (
+                <p className="mt-2 text-xs text-muted">
+                  <span className="font-medium">Cómo sabrás que funciona: </span>
+                  {p.track}
+                </p>
+              ) : null}
             </li>
           ))}
         </ol>
       </Section>
+      <List title="Pequeños cambios que suman" items={content.quick_wins ?? []} />
       <List title="Qué empeoró" items={content.worsened} />
       <List title="Qué mejoró" items={content.improved} />
       <List title="Qué está estable" items={content.stable} />

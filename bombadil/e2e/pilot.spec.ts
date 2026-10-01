@@ -49,11 +49,8 @@ async function onboard(page: Page, email: string) {
   await page.getByRole("checkbox", { name: /autorizo el tratamiento/ }).check();
   await page.getByLabel("Fecha de nacimiento").fill("1982-08-15");
   await page.getByLabel("Sexo biológico").selectOption("male");
-  await page.getByLabel("Estatura (cm)").fill("176");
-  await page.getByLabel("¿Fumas?").selectOption("never");
-  await page.getByLabel(/Qué quieres lograr/).fill("Llegar a los 80 con energía.");
   await page.getByRole("button", { name: "Empezar" }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  await expect(page).toHaveURL(/\/app\/empezar$/);
 }
 
 /** Optional visual record for manual design review: SCREENSHOT_DIR=... npm run test:e2e */
@@ -92,10 +89,38 @@ test("operator invites two participants", async ({ page }) => {
 
 test("participant consents, onboards and sees the home", async ({ page }) => {
   await onboard(page, ANA);
-  await expect(page.getByText("Semana 1 del piloto")).toBeVisible();
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "Hoy" })).toBeVisible();
+  await expect(page.getByText("Construyamos tus hábitos de longevidad")).toBeVisible();
   await noHorizontalScroll(page);
   await page.goto("/app/datos");
   await expect(page.getByText(`Versión ${CONSENT_VERSION} · aceptado`, { exact: false })).toBeVisible();
+});
+
+test("lifestyle questionnaire → personalised habit plan → logging today", async ({ page }) => {
+  await login(page, ANA);
+  await page.goto("/app/empezar");
+  await page.getByLabel(/Qué quieres lograr/).fill("Llegar a los 80 con energía.");
+  for (const option of ["Menos de 1 hora", "Ninguno", "6 a 7", "0 a 1", "Todos los días", "1 a 7", "Alto", "20 minutos"]) {
+    await page.getByText(option, { exact: true }).first().click();
+  }
+  await page.getByText("Fuerza", { exact: true }).click();
+  await page.getByText("Sueño", { exact: true }).click();
+  await snap(page, "02a-lifestyle");
+  await page.getByRole("button", { name: "Crear mi plan de hábitos" }).click();
+  await expect(page).toHaveURL(/\/app\?plan=nuevo$/);
+  await expect(page.getByText("Tu plan está listo")).toBeVisible();
+  await expect(page.getByText("Camina 10 minutos")).toBeVisible();
+  await expect(page.getByText("Tus hábitos · 0 de 3 hoy")).toBeVisible();
+  await page.getByRole("button", { name: "Lo hice" }).first().click();
+  await expect(page.getByText("Tus hábitos · 1 de 3 hoy")).toBeVisible();
+  await expect(page.getByText(/1 días/)).toBeVisible();
+  await snap(page, "02b-today");
+  await noHorizontalScroll(page);
+  await page.goto("/app/plan");
+  await expect(page.getByText("Sugeridos para después")).toBeVisible();
+  await page.getByRole("button", { name: "Empezar este" }).click();
+  await expect(page.getByText(/Activos \(4\)/)).toBeVisible();
 });
 
 test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {
@@ -136,8 +161,10 @@ test("lab PDF: upload → masked extraction → automatic timeline and report; o
   await page.goto("/app/examenes");
   await page.getByLabel("Archivo PDF del laboratorio").setInputFiles(pdf);
   await page.getByRole("button", { name: "Subir examen" }).click();
-  await expect(page.getByText(/Examen recibido/)).toBeVisible();
-  // Extraction, acceptance and the report run in the background after the upload response.
+  // The upload lands on the exam page, which follows the analysis until the plan is ready.
+  await expect(page.getByText(/Analizando tu examen|Tus resultados/).first()).toBeVisible();
+  await expect(page.getByText("Qué significa y qué hacer")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Glucosa en ayunas/).first()).toBeVisible();
   await expect(async () => {
     await page.goto("/app/linea-de-tiempo");
     await expect(page.getByText("Colesterol HDL")).toBeVisible({ timeout: 2000 });
@@ -177,7 +204,7 @@ test("imaging report: upload → masked plain-language interpretation the partic
   await page.goto("/app/examenes");
   await page.getByLabel("Archivo PDF del laboratorio").setInputFiles(pdf);
   await page.getByRole("button", { name: "Subir examen" }).click();
-  await expect(page.getByText(/Examen recibido/)).toBeVisible();
+  await expect(page.getByText("Meniscopatía grado II del menisco medial")).toBeVisible({ timeout: 30_000 });
   await expect(async () => {
     await page.goto("/app/examenes");
     await expect(page.getByRole("link", { name: "Resonancia magnética · Rodilla izquierda" })).toBeVisible({ timeout: 2000 });

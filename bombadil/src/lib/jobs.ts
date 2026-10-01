@@ -1,11 +1,13 @@
 import "server-only";
 import { autoAcceptRows } from "@/domain/auto-review";
+import { streak, todayInColombia, weekProgress } from "@/domain/habits";
 import { imagingAlarm } from "@/domain/imaging";
 import { buildSnapshot, metricLabel, MEASUREMENT_LABEL, MEASUREMENT_UNIT } from "@/domain/snapshot";
 import { GOAL_STATUS_LABEL } from "@/domain/goals";
 import type { ParticipantRow } from "@/lib/auth";
 import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { raiseAlerts } from "@/lib/alerts";
+import { loadHabits } from "@/lib/data/habits";
 import { env } from "@/lib/env";
 import { commitLabResults } from "@/lib/lab-results";
 import { generateCheckinReply } from "@/lib/llm/checkin";
@@ -143,6 +145,9 @@ async function runImagingInterpretation(
     .eq("id", documentId);
   await db.from("alerts").delete().eq("origin", "lab").eq("origin_id", documentId).eq("status", "open");
   await raiseAlerts(db, participantId, imagingAlarm(reportText), "lab", documentId);
+
+  const report = await publishAutomaticReport(db, participantId);
+  if ("error" in report) console.error(`automatic report for ${participantId} failed:`, report.error);
 }
 
 function isIsoDate(s: string | null): s is string {
@@ -164,6 +169,8 @@ export async function runCheckinReply(checkinId: string): Promise<void> {
     const data = await loadParticipantData(db, checkin.participant_id);
     const snapshot = buildSnapshot(toSnapshotInput(participant as ParticipantRow, data));
     const { data: alerts } = await db.from("alerts").select("level, message").eq("origin", "checkin").eq("origin_id", checkinId);
+    const habits = await loadHabits(db, checkin.participant_id);
+    const today = todayInColombia();
     const weekMeasurements = data.measurements.filter((m) => m.source === "checkin" && Date.parse(m.measured_at) >= Date.parse(checkin.submitted_at) - 36e5);
 
     const reply = await generateCheckinReply({
@@ -174,6 +181,13 @@ export async function runCheckinReply(checkinId: string): Promise<void> {
       goals: snapshot.goals.map((g) => ({ label: metricLabel(g.metric), status: GOAL_STATUS_LABEL[g.status], current: g.current, target: g.target })),
       alerts: alerts ?? [],
       freeText: checkin.free_text,
+      habits: habits
+        .filter((h) => h.status === "active")
+        .map((h) => {
+          const stats = { target_per_week: h.target_per_week, started_on: h.started_on ?? today };
+          const w = weekProgress(stats, h.logDays, today);
+          return { title: h.title, done_this_week: w.done, target_per_week: w.target, streak: streak(stats, h.logDays, today), next_step: h.next_step, tiny: h.tiny };
+        }),
     });
     const autoSend = env.checkinAutoSend();
     await db

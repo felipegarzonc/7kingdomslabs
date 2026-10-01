@@ -12,13 +12,14 @@ metas cortas y un check-in semanal de menos de 2 minutos.
 
 | Participante (web móvil) | Operador (Felipe) |
 |---|---|
-| Consentimiento informado versionado + onboarding | Invita participantes por correo |
-| Sube PDFs de laboratorio: se transcriben, guardan y analizan solos, con un informe nuevo publicado automáticamente | Corrige cualquier extracción al lado del PDF original (y transcribe a mano las que fallan) |
+| Onboarding de un minuto (consentimiento, fecha de nacimiento, sexo) y cuestionario de estilo de vida de 8 preguntas | Invita participantes por correo |
+| Plan de hábitos de longevidad: hasta 3 hábitos pequeños anclados a su rutina, registro diario (completo o versión mínima), rachas y progresión semanal (subir de nivel / hacerlo más fácil) | (exportable con los datos del participante) |
+| Sube PDFs de laboratorio o informes de imágenes: se analizan solos y la página del examen muestra qué significa y qué hacer, con pasos concretos | Corrige cualquier extracción al lado del PDF original (y transcribe a mano las que fallan) |
 | Registra presión (brazo, día/noche), peso, cintura, FC, sueño, ejercicio, fuerza de agarre, VO2max y tragos de alcohol por semana | Puede generar, editar y publicar informes a mano además de los automáticos |
 | Línea de tiempo por marcador con rango de referencia y tendencia | Revisa y envía las respuestas a los check-ins |
 | Métricas derivadas: IMC, cintura/estatura, no-HDL, TG/HDL, FIB-4 (hígado), síndrome metabólico (ATP III e IDF), descenso nocturno de PA | Panel del piloto: retención semana a semana, efecto medible, disposición a pagar |
 | Metas a 3/6/12 meses con estado (en camino / estancada / retrocediendo) | Alertas deterministas (urgencia / consultar pronto / próxima cita) |
-| Check-in semanal con respuesta del equipo | Registro de auditoría de cada acceso a datos |
+| Check-in semanal con respuesta automática enfocada en sus hábitos | Registro de auditoría de cada acceso a datos |
 | Informes publicados; exportar o eliminar todos sus datos | Exportar o eliminar datos de un participante |
 
 **Límites de diseño:** el LLM solo (a) transcribe PDFs a JSON a partir de texto con datos personales
@@ -26,7 +27,7 @@ enmascarados y (b) redacta a partir de datos ya calculados. Toda la lógica clí
 `src/domain` (puro, testeado) y las urgencias se deciden con reglas en `config/escalation-rules.json`,
 aunque la API del LLM falle. Los exámenes se analizan sin revisión humana previa: solo se guardan
 automáticamente los valores del catálogo con unidad reconocida (`src/domain/auto-review.ts`); el resto queda
-listado para el operador. Las respuestas a los check-ins siguen saliendo en borrador salvo `CHECKIN_AUTO_SEND=true`.
+listado para el operador. Las respuestas a los check-ins se envían solas salvo `CHECKIN_AUTO_SEND=false`.
 
 ## Stack
 
@@ -101,7 +102,7 @@ cp .env.example .env.local   # y completa los valores
 | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) |
 | `NEXT_PUBLIC_SITE_URL` | URL pública de la app |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` | Opcionales (por defecto `claude-opus-5-5`, `high`) |
-| `CHECKIN_AUTO_SEND` | `true` para enviar respuestas sin revisión (por defecto `false`) |
+| `CHECKIN_AUTO_SEND` | `false` para dejar las respuestas en borrador para el operador (por defecto se envían solas) |
 | `ALERT_WEBHOOK_URL` | Opcional: webhook de Slack/Discord para urgencias |
 
 ### 3. Local

@@ -10,7 +10,7 @@ export const OPERATOR = {
   city: "Bogotá, Colombia",
 };
 
-export const CONSENT_VERSION = "2026-10-v3";
+export const CONSENT_VERSION = "2026-10-v4";
 
 export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
@@ -21,12 +21,12 @@ export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
     title: "Qué datos tratamos",
     body:
-      "Datos de identificación y contacto (nombre, correo), datos básicos (fecha de nacimiento, sexo, estatura) y datos de salud, que son datos sensibles: resultados de exámenes de laboratorio, informes de imágenes diagnósticas (resonancias, ecografías, radiografías, tomografías), mediciones (peso, cintura, presión arterial, frecuencia cardiaca, sueño, ejercicio), respuestas a los check-ins semanales y tus metas.",
+      "Datos de identificación y contacto (nombre, correo), datos básicos (fecha de nacimiento, sexo, estatura) y datos de salud, que son datos sensibles: resultados de exámenes de laboratorio, informes de imágenes diagnósticas (resonancias, ecografías, radiografías, tomografías), mediciones (peso, cintura, presión arterial, frecuencia cardiaca, sueño, ejercicio), respuestas a los check-ins semanales, tus respuestas sobre tu estilo de vida (actividad, sueño, alimentación, alcohol, estrés), tus hábitos y su registro diario, y tus metas.",
   },
   {
     title: "Para qué los usamos",
     body:
-      "Para organizar tu línea de tiempo de exámenes y mediciones, calcular tendencias y metas, generar informes y respuestas de acompañamiento, detectar valores que ameriten consultar a un médico, y evaluar los resultados del piloto (retención, cambios de hábitos y disposición a pagar) de forma agregada.",
+      "Para organizar tu línea de tiempo de exámenes y mediciones, calcular tendencias y metas, generar informes y respuestas de acompañamiento, diseñar y ajustar tu plan de hábitos, detectar valores que ameriten consultar a un médico, y evaluar los resultados del piloto (retención, cambios de hábitos y disposición a pagar) de forma agregada.",
   },
   {
     title: "Inteligencia artificial y encargados",

@@ -12,7 +12,7 @@ import { deleteParticipantCompletely } from "@/lib/account";
 import { logAdminAccess } from "@/lib/audit";
 import { requireAdmin, type ParticipantRow } from "@/lib/auth";
 import { commitLabResults } from "@/lib/lab-results";
-import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
+import { loadImagingForReport, loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { env } from "@/lib/env";
 import { runCheckinReply, runExtraction } from "@/lib/jobs";
 import { generateReport, ReportContentSchema, type ReportContent } from "@/lib/llm/report";
@@ -249,10 +249,11 @@ export async function generateReportDraft(_prev: AdminState, form: FormData): Pr
   const { data: p } = await supabase.from("participants").select("*").eq("id", participantId).single();
   if (!p) return { error: "Participante no encontrado." };
   const snapshot = buildSnapshot(toSnapshotInput(p as ParticipantRow, await loadParticipantData(supabase, participantId)));
-  if (!snapshot.markers.length && !Object.keys(snapshot.measurementsLatest).length) return { error: "No hay datos revisados para interpretar." };
+  const imaging = await loadImagingForReport(supabase, participantId);
+  if (!snapshot.markers.length && !Object.keys(snapshot.measurementsLatest).length && !imaging.length) return { error: "No hay datos revisados para interpretar." };
   let draft;
   try {
-    draft = await generateReport(snapshot);
+    draft = await generateReport(snapshot, imaging);
   } catch (e) {
     return { error: `No se pudo generar el informe: ${e instanceof Error ? e.message : String(e)}` };
   }
@@ -305,9 +306,16 @@ export async function saveReport(_prev: AdminState, form: FormData): Promise<Adm
     return { error: "El informe necesita titular y entre 1 y 3 prioridades con título." };
   }
   const supabase = await createClient();
-  const { data: report } = await supabase.from("reports").select("participant_id, status").eq("id", id).single();
+  const { data: report } = await supabase.from("reports").select("participant_id, status, content").eq("id", id).single();
   if (!report) return { error: "Informe no encontrado." };
   if (report.status !== "draft") return { error: "Solo se editan borradores." };
+  // The editor covers the core fields; keep the generated steps and quick wins.
+  const previous = report.content as ReportContent;
+  content = {
+    ...content,
+    quick_wins: previous.quick_wins,
+    priorities: content.priorities.map((p, i) => ({ ...p, steps: previous.priorities[i]?.steps, track: previous.priorities[i]?.track })),
+  };
 
   if (intent === "approve") {
     await supabase.from("reports").update({ status: "archived" }).eq("participant_id", report.participant_id).eq("status", "approved");

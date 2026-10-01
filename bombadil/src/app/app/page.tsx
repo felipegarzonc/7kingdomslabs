@@ -1,133 +1,135 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertNotices } from "@/components/alert-list";
-import { fmtDate, fmtNum } from "@/components/format";
-import { GoalStatusBadge, ProgressBar } from "@/components/goal-status";
-import { Card, EmptyState, LinkButton, PageHeader } from "@/components/ui";
+import { fmtDate } from "@/components/format";
+import { HabitCard } from "@/components/habit-card";
+import { Card, LinkButton, Notice, PageHeader } from "@/components/ui";
+import { todayInColombia } from "@/domain/habits";
 import { pilotWeek } from "@/domain/pilot";
-import { buildSnapshot, metricLabel, MEASUREMENT_LABEL, MEASUREMENT_UNIT } from "@/domain/snapshot";
 import { requireParticipant } from "@/lib/auth";
-import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
+import { loadHabits } from "@/lib/data/habits";
+import type { ReportContent } from "@/lib/llm/report";
 import { createClient } from "@/lib/supabase/server";
 import { FeedbackCard } from "./feedback-card";
 
-export const metadata: Metadata = { title: "Inicio" };
+export const metadata: Metadata = { title: "Hoy" };
 
 /** Alarm notices on the home page are about the last 7 days; older ones live in the operator's queue. */
 function weekAgo() {
   return new Date(Date.now() - 7 * 24 * 3600e3).toISOString();
 }
 
-export default async function ParticipantHome() {
+const LONG_DATE = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota" });
+
+export default async function TodayPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
   const { participant: p } = await requireParticipant();
+  const { plan } = await searchParams;
   const supabase = await createClient();
   const week = p.pilot_start ? pilotWeek(p.pilot_start) : 1;
-  const [data, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs] = await Promise.all([
-    loadParticipantData(supabase, p.id),
+  const today = todayInColombia();
+  const [habits, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs, reportRes, docsRes] = await Promise.all([
+    loadHabits(supabase, p.id),
     supabase.from("checkins").select("id").eq("participant_id", p.id).eq("week", week).maybeSingle(),
-    supabase.from("checkin_replies").select("final_text, sent_at, checkins(week)").eq("participant_id", p.id).eq("status", "sent").order("sent_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("checkin_replies").select("final_text, sent_at").eq("participant_id", p.id).eq("status", "sent").order("sent_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("alerts").select("level, message, created_at").eq("participant_id", p.id).eq("status", "open").in("level", ["urgency", "consult_soon"]).gte("created_at", weekAgo()).order("created_at", { ascending: false }).limit(5),
     supabase.from("pilot_feedback").select("id").eq("participant_id", p.id).limit(1),
-    supabase.from("lab_documents").select("id", { count: "exact", head: true }).eq("participant_id", p.id).neq("status", "reviewed"),
+    supabase.from("lab_documents").select("id", { count: "exact", head: true }).eq("participant_id", p.id).in("status", ["uploaded", "extracting"]),
+    supabase.from("reports").select("content, approved_at").eq("participant_id", p.id).eq("status", "approved").order("approved_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("lab_documents").select("id", { count: "exact", head: true }).eq("participant_id", p.id),
   ]);
-  const snapshot = buildSnapshot(toSnapshotInput(p, data));
-  const doneThisWeek = !!checkinRes.data;
-  const reply = replyRes.data as { final_text: string; sent_at: string; checkins: { week: number } | null } | null;
-  const latest = snapshot.measurementsLatest;
+  const active = habits.filter((h) => h.status === "active");
+  const suggested = habits.filter((h) => h.status === "suggested");
+  const doneToday = active.filter((h) => h.logDays.includes(today)).length;
+  const report = reportRes.data as { content: ReportContent; approved_at: string } | null;
+  const reply = replyRes.data as { final_text: string; sent_at: string } | null;
 
   return (
     <>
-      <PageHeader title="Hola 👋" subtitle={`Semana ${week} del piloto`} />
+      <PageHeader title="Hoy" subtitle={<span className="capitalize">{LONG_DATE.format(new Date())}</span>} />
       <div className="flex flex-col gap-4">
         <AlertNotices alerts={(alertsRes.data ?? []).map((a) => ({ level: a.level, message: a.message }))} />
+        {plan === "nuevo" ? <Notice tone="good" title="Tu plan está listo">Empieza hoy con estos hábitos. Son pequeños a propósito: lo importante es no fallar dos días seguidos.</Notice> : null}
 
-        {!doneThisWeek ? (
-          <Card className="border-accent bg-accent-soft/40">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold">Tu check-in de la semana {week}</p>
-                <p className="text-sm text-muted">Menos de 2 minutos: mediciones, prioridades y cómo te fue.</p>
-              </div>
-              <LinkButton href="/app/checkin">Hacer check-in</LinkButton>
+        {active.length ? (
+          <section>
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="font-semibold">
+                Tus hábitos · {doneToday} de {active.length} hoy
+              </h2>
+              <Link href="/app/plan" className="text-sm font-medium text-accent">
+                Ajustar mi plan
+              </Link>
             </div>
+            {p.personal_goal ? <p className="mb-3 text-sm text-muted">Para: «{p.personal_goal}»</p> : null}
+            <ul className="flex flex-col gap-3">
+              {active.map((h) => (
+                <HabitCard key={h.id} habit={h} today={today} />
+              ))}
+            </ul>
+            {suggested.length ? (
+              <p className="mt-3 text-sm text-muted">
+                Tienes {suggested.length} hábito(s) sugerido(s) para cuando estos sean fáciles.{" "}
+                <Link href="/app/plan" className="text-accent underline">
+                  Verlos
+                </Link>
+              </p>
+            ) : null}
+          </section>
+        ) : (
+          <Card className="border-accent bg-accent-soft/40">
+            <p className="font-serif text-xl font-semibold">Construyamos tus hábitos de longevidad</p>
+            <p className="mt-1 text-sm text-muted">
+              Responde 8 preguntas de un toque sobre cómo vives hoy y te armamos 3 hábitos pequeños, anclados a tu rutina, que suben de nivel cuando se vuelven fáciles.
+            </p>
+            <LinkButton href={suggested.length ? "/app/plan" : "/app/empezar"} className="mt-3">
+              {suggested.length ? "Elegir mis hábitos" : "Armar mi plan (2 minutos)"}
+            </LinkButton>
           </Card>
-        ) : null}
+        )}
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Card title="Tus prioridades">
-            {p.priorities.length ? (
-              <ol className="flex list-decimal flex-col gap-2 pl-5 text-sm">
-                {p.priorities.map((x) => (
-                  <li key={x}>{x}</li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-sm text-muted">Tus prioridades aparecerán cuando el equipo apruebe tu primer informe. Mientras tanto, sube tus exámenes y registra tus mediciones.</p>
-            )}
-          </Card>
-
-          <Card title="Mensaje del equipo">
-            {reply ? (
+          <Card title="Tu plan de salud" action={report ? <Link href="/app/informes" className="text-sm font-medium text-accent">Ver completo</Link> : null}>
+            {report ? (
               <>
-                <p className="text-sm leading-relaxed whitespace-pre-line">{reply.final_text}</p>
-                <p className="mt-2 text-xs text-muted">
-                  Semana {reply.checkins?.week ?? "—"} · {fmtDate(reply.sent_at)}
-                </p>
+                <p className="text-sm font-medium">{report.content.headline}</p>
+                <ol className="mt-2 flex list-decimal flex-col gap-1 pl-5 text-sm">
+                  {report.content.priorities.map((x) => (
+                    <li key={x.title}>{x.title}</li>
+                  ))}
+                </ol>
+                <p className="mt-2 text-xs text-muted">Actualizado el {fmtDate(report.approved_at)} con tus exámenes.</p>
               </>
             ) : (
-              <p className="text-sm text-muted">Después de tu check-in recibirás aquí una respuesta breve.</p>
+              <p className="text-sm text-muted">
+                Sube un examen de sangre o un informe de imágenes y en uno o dos minutos te decimos qué significa y qué hacer.
+              </p>
+            )}
+            <LinkButton href="/app/examenes" variant="secondary" className="mt-3">
+              {docsRes.count ? "Subir otro examen" : "Subir mi primer examen"}
+            </LinkButton>
+            {pendingDocs.count ? <p className="mt-2 text-xs text-muted">Analizando {pendingDocs.count} examen(es)…</p> : null}
+          </Card>
+
+          <Card title={`Revisión de la semana ${week}`}>
+            {checkinRes.data ? (
+              reply ? (
+                <>
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{reply.final_text}</p>
+                  <p className="mt-2 text-xs text-muted">{fmtDate(reply.sent_at)}</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted">Recibimos tu revisión de esta semana. Tu respuesta llega en un momento.</p>
+              )
+            ) : (
+              <>
+                <p className="text-sm text-muted">Dos minutos: cómo te fue, tus mediciones y qué fue difícil. Recibes una respuesta con un ajuste para la próxima semana.</p>
+                <LinkButton href="/app/checkin" variant="secondary" className="mt-3">
+                  Hacer mi revisión
+                </LinkButton>
+              </>
             )}
           </Card>
         </div>
-
-        <Card title="Metas" action={<Link href="/app/metas" className="text-sm font-medium text-accent">Ver todas</Link>}>
-          {snapshot.goals.length ? (
-            <ul className="flex flex-col gap-4">
-              {snapshot.goals.slice(0, 4).map((g) => (
-                <li key={g.id}>
-                  <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <span className="font-medium">
-                      {metricLabel(g.metric)}: {fmtNum(g.baseline)} → {fmtNum(g.target)}
-                    </span>
-                    <GoalStatusBadge status={g.status} />
-                  </div>
-                  <ProgressBar progress={g.progress} expected={g.expected} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState title="Aún no tienes metas">
-              <Link href="/app/metas" className="text-accent underline">
-                Crea una meta a 3, 6 o 12 meses
-              </Link>
-            </EmptyState>
-          )}
-        </Card>
-
-        <Card title="Últimas mediciones" action={<Link href="/app/mediciones" className="text-sm font-medium text-accent">Registrar</Link>}>
-          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {(["weight", "waist", "resting_hr", "sleep_hours", "grip_strength", "vo2max"] as const).map((t) => (
-              <div key={t} className="rounded-xl bg-surface-2 p-3">
-                <dt className="text-xs text-muted">{MEASUREMENT_LABEL[t]}</dt>
-                <dd className="mt-0.5 text-lg font-semibold tabular-nums">
-                  {latest[t] ? `${fmtNum(latest[t]!.value)} ${MEASUREMENT_UNIT[t]}` : "—"}
-                </dd>
-              </div>
-            ))}
-            <div className="col-span-2 rounded-xl bg-surface-2 p-3 sm:col-span-4">
-              <dt className="text-xs text-muted">Presión arterial (media 30 días, diurna)</dt>
-              <dd className="mt-0.5 text-lg font-semibold tabular-nums">
-                {snapshot.derived.bp ? `${fmtNum(snapshot.derived.bp.recentMeanSystolic, 0)}/${fmtNum(snapshot.derived.bp.recentMeanDiastolic, 0)} mmHg · ${snapshot.derived.bp.readings} ${snapshot.derived.bp.readings === 1 ? "lectura" : "lecturas"}` : "—"}
-              </dd>
-            </div>
-          </dl>
-        </Card>
-
-        {pendingDocs.count ? (
-          <p className="text-sm text-muted">
-            Tienes {pendingDocs.count} examen(es) en proceso. <Link href="/app/examenes" className="text-accent underline">Ver</Link>
-          </p>
-        ) : null}
 
         {week >= 6 && !feedbackRes.data?.length ? <FeedbackCard /> : null}
       </div>

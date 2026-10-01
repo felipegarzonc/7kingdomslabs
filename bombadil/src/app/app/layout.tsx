@@ -4,13 +4,12 @@ import { requireParticipant } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 const LINKS = [
-  { href: "/app", label: "Inicio" },
-  { href: "/app/checkin", label: "Check-in" },
-  { href: "/app/mediciones", label: "Mediciones" },
-  { href: "/app/linea-de-tiempo", label: "Línea de tiempo" },
+  { href: "/app", label: "Hoy" },
+  { href: "/app/plan", label: "Mi plan" },
   { href: "/app/examenes", label: "Exámenes" },
-  { href: "/app/metas", label: "Metas" },
-  { href: "/app/informes", label: "Informes" },
+  { href: "/app/informes", label: "Informe" },
+  { href: "/app/linea-de-tiempo", label: "Progreso" },
+  { href: "/app/mediciones", label: "Registrar" },
   { href: "/app/datos", label: "Mis datos" },
 ];
 

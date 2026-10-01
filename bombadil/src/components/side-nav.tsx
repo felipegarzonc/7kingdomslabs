@@ -27,7 +27,7 @@ export function SideNav({ links }: { links: SideLink[] }) {
                 className={cx(
                   "flex min-h-12 items-center gap-3 rounded-2xl border-2 px-3 text-sm font-black tracking-wide whitespace-nowrap uppercase",
                   "max-md:min-w-16 max-md:flex-col max-md:justify-center max-md:gap-0.5 max-md:px-2 max-md:py-1 max-md:text-[10px]",
-                  active ? "border-accent/50 bg-accent-soft text-accent" : "border-transparent text-muted hover:bg-surface-2",
+                  active ? "border-[#7fa6e0] bg-accent-soft text-accent-strong" : "border-transparent text-[#4a5568] hover:bg-surface-2",
                 )}
               >
                 <Icon name={l.icon} size={26} />

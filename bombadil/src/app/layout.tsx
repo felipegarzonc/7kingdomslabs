@@ -4,7 +4,15 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "Bombadil", template: "%s · Bombadil" },
   description: "Longevidad sin humo: tus exámenes y hábitos, en una sola línea de tiempo.",
-  icons: { icon: "/icon.svg" },
+  // New file names on each logo change: browsers cache favicons for a long time.
+  icons: {
+    icon: [
+      { url: "/bombadil-icon.svg", type: "image/svg+xml" },
+      { url: "/bombadil-icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/bombadil-icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   robots: { index: false, follow: false },
 };
 

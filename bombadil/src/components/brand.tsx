@@ -4,7 +4,7 @@ export function Brand({ href = "/" }: { href?: string }) {
   return (
     <Link href={href} className="inline-flex items-center gap-2 font-serif text-lg font-semibold tracking-tight">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.svg" alt="" width={28} height={28} className="rounded-lg" />
+      <img src="/bombadil-icon.svg" alt="" width={28} height={28} className="rounded-lg" />
       Bombadil
     </Link>
   );

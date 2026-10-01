@@ -9,7 +9,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="font-serif text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+        <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">{title}</h1>
         {subtitle ? <p className="mt-1 text-sm text-muted">{subtitle}</p> : null}
       </div>
       {action}
@@ -19,10 +19,10 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 
 export function Card({ children, className, title, action }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode }) {
   return (
-    <section className={cx("min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-5", className)}>
+    <section className={cx("min-w-0 rounded-3xl border-2 border-border bg-surface p-5 sm:p-6", className)}>
       {title ? (
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">{title}</h2>
+          <h2 className="text-lg font-black">{title}</h2>
           {action}
         </div>
       ) : null}
@@ -54,16 +54,17 @@ export function Notice({ tone = "info", title, children }: { tone?: Tone; title?
   );
 }
 
+// Chunky, tactile buttons (a darker bottom edge that presses in), as in the game screens.
 const BTN = {
-  primary: "bg-accent text-white hover:bg-accent-strong dark:text-bg",
-  secondary: "border border-border bg-surface hover:bg-surface-2 text-text",
-  danger: "bg-danger text-white hover:opacity-90 dark:text-bg",
+  primary: "bg-accent text-white border-b-4 border-black/25 hover:brightness-110 dark:text-bg",
+  secondary: "border-2 border-border border-b-4 bg-surface hover:bg-surface-2 text-text",
+  danger: "bg-danger text-white border-b-4 border-black/25 hover:opacity-90 dark:text-bg",
   ghost: "text-accent hover:bg-accent-soft",
 };
 export type ButtonVariant = keyof typeof BTN;
 export const buttonClass = (variant: ButtonVariant = "primary", className?: string) =>
   cx(
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-extrabold transition active:translate-y-px active:border-b-2 disabled:cursor-not-allowed disabled:opacity-60",
     BTN[variant],
     className,
   );

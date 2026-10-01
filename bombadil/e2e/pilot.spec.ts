@@ -99,8 +99,10 @@ test("operator invites two participants", async ({ page }) => {
 test("participant consents, onboards and sees the home", async ({ page }) => {
   await onboard(page, ANA);
   await page.goto("/app");
-  await expect(page.getByRole("heading", { name: "Hoy" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hola, Ana" })).toBeVisible();
   await expect(page.getByText("Construyamos tus hábitos de longevidad")).toBeVisible();
+  // The game frame is there from day one: level, streak and this week's quests.
+  await expect(page.getByText("Aprendiz del bosque").first()).toBeVisible();
   await noHorizontalScroll(page);
   await page.goto("/app/datos");
   await expect(page.getByText(`Versión ${CONSENT_VERSION} · aceptado`, { exact: false })).toBeVisible();
@@ -120,9 +122,9 @@ test("lifestyle questionnaire → personalised habit plan → logging today", as
   await expect(page).toHaveURL(/\/app\?plan=nuevo$/);
   await expect(page.getByText("Tu plan está listo")).toBeVisible();
   await expect(page.getByText("Camina 10 minutos")).toBeVisible();
-  await expect(page.getByText("Tus hábitos · 0 de 3 hoy")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Hoy: 0 de 3 hábitos" })).toBeVisible();
   await page.getByRole("button", { name: "Lo hice" }).first().click();
-  await expect(page.getByText("Tus hábitos · 1 de 3 hoy")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Hoy: 1 de 3 hábitos" })).toBeVisible();
   await expect(page.getByText("1/5 esta semana").first()).toBeVisible();
   // The game layer: XP for today's habit, a lit streak and the week's missions.
   await expect(page.getByText("Aprendiz del bosque")).toBeVisible();
@@ -144,7 +146,7 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
   await expect(page.getByRole("link", { name: "Ir a mi cuenta" })).toBeVisible();
   await page.goto("/app");
-  await page.getByRole("link", { name: "Conectar mis dispositivos" }).click();
+  await page.getByRole("link", { name: /Usas Strava, Garmin o Apple Watch/ }).click();
   await expect(page).toHaveURL(/\/app\/conexiones$/);
   await page.getByRole("button", { name: "Crear mi enlace de Apple Salud" }).click();
   const url = await page.getByLabel("Tu enlace personal").inputValue();
@@ -173,7 +175,7 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   expect((await page.request.post("/api/ingest/not-a-real-token-123456789", { data: payload })).status()).toBe(404);
 
   await page.goto("/app");
-  await expect(page.getByText("Tus hábitos · 2 de 4 hoy")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Hoy: 2 de 4 hábitos" })).toBeVisible();
   await expect(page.getByText("Registrado con Apple Salud")).toBeVisible();
   await expect(page.getByText("Tus datos de la semana")).toBeVisible();
   await expect(page.getByText("8.000").first()).toBeVisible();
@@ -181,14 +183,36 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   await expect(page.getByText(/Últimos datos recibidos/)).toBeVisible();
 
   // Progress: character sheet, badges unlocked by what Ana already did.
-  await page.getByRole("link", { name: "Progreso" }).first().click();
+  await page.getByRole("link", { name: "Personaje" }).first().click();
   await expect(page).toHaveURL(/\/app\/progreso$/);
-  await expect(page.getByRole("heading", { name: "Tu progreso" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Insignias" })).toBeVisible();
   await expect(page.getByText("Primer paso")).toBeVisible();
   await expect(page.getByText("Conectado", { exact: true })).toBeVisible();
-  await expect(page.getByText("Misiones épicas: tus metas")).toBeVisible();
   await snap(page, "02d-progress");
   await noHorizontalScroll(page);
+
+  // The path of a habit and the quests page.
+  await page.getByRole("link", { name: "Camino" }).first().click();
+  await expect(page.getByText(/^Prueba:/)).toBeVisible();
+  await expect(page.getByText(/^Esta semana · \d\/\d$/)).toBeVisible();
+  await snap(page, "02e-path");
+  await noHorizontalScroll(page);
+  await page.getByRole("link", { name: "Misiones" }).first().click();
+  await expect(page.getByText("Jefe final: examen de control")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Misiones épicas: tus metas" })).toBeVisible();
+  await noHorizontalScroll(page);
+
+  // Logging the last habits of the day opens the celebration.
+  await page.goto("/app");
+  await page.getByRole("button", { name: "Lo hice" }).first().click();
+  await expect(page.getByRole("img", { name: "Hoy: 3 de 4 hábitos" })).toBeVisible();
+  await page.getByRole("button", { name: "Lo hice" }).first().click();
+  await expect(page).toHaveURL(/\/app\/celebracion$/);
+  await expect(page.getByRole("heading", { name: "día de racha" })).toBeVisible();
+  await snap(page, "02f-celebration");
+  await noHorizontalScroll(page);
+  await page.getByRole("link", { name: "Continuar" }).click();
+  await expect(page.getByText(/Día completo: tu racha va en 1 día/)).toBeVisible();
 });
 
 test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {

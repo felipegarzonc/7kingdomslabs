@@ -35,15 +35,15 @@ export const SHIELD_MAX = 2;
 
 export type AttributeKey = Pillar | "sabiduria";
 
-export const ATTRIBUTES: Array<{ key: AttributeKey; label: string; icon: string; blurb: string }> = [
-  { key: "movimiento", label: "Resistencia", icon: "🫀", blurb: "Capacidad cardiorrespiratoria: el predictor más fuerte de años de vida." },
-  { key: "fuerza", label: "Fuerza", icon: "💪", blurb: "Músculo y agarre: independencia a los 80." },
-  { key: "sueno", label: "Descanso", icon: "🌙", blurb: "Sueño de 7 a 8 horas: reparación diaria." },
-  { key: "nutricion", label: "Nutrición", icon: "🥦", blurb: "Más plantas, menos ultraprocesados." },
-  { key: "estres", label: "Calma", icon: "🧘", blurb: "Manejo del estrés: presión, sueño y ánimo." },
-  { key: "conexion", label: "Vínculos", icon: "🤝", blurb: "Las relaciones protegen tanto como dejar de fumar." },
-  { key: "sustancias", label: "Templanza", icon: "🛡️", blurb: "Menos alcohol, cero tabaco." },
-  { key: "sabiduria", label: "Sabiduría", icon: "📜", blurb: "Conocerte: exámenes, mediciones y revisiones semanales." },
+export const ATTRIBUTES: Array<{ key: AttributeKey; label: string; blurb: string }> = [
+  { key: "movimiento", label: "Resistencia", blurb: "Capacidad cardiorrespiratoria: el predictor más fuerte de años de vida." },
+  { key: "fuerza", label: "Fuerza", blurb: "Músculo y agarre: independencia a los 80." },
+  { key: "sueno", label: "Descanso", blurb: "Sueño de 7 a 8 horas: reparación diaria." },
+  { key: "nutricion", label: "Nutrición", blurb: "Más plantas, menos ultraprocesados." },
+  { key: "estres", label: "Calma", blurb: "Manejo del estrés: presión, sueño y ánimo." },
+  { key: "conexion", label: "Vínculos", blurb: "Las relaciones protegen tanto como dejar de fumar." },
+  { key: "sustancias", label: "Templanza", blurb: "Menos alcohol, cero tabaco." },
+  { key: "sabiduria", label: "Sabiduría", blurb: "Conocerte: exámenes, mediciones y revisiones semanales." },
 ];
 
 const TITLES: Array<[number, string]> = [
@@ -105,7 +105,6 @@ export interface GameInput {
 
 export interface Achievement {
   key: string;
-  icon: string;
   title: string;
   description: string;
   unlocked: boolean;
@@ -129,7 +128,7 @@ export interface GameState {
   levelProgress: number;
   xpIntoLevel: number;
   xpForNext: number;
-  attributes: Array<{ key: AttributeKey; label: string; icon: string; blurb: string; xp: number; level: number; progress: number }>;
+  attributes: Array<{ key: AttributeKey; label: string; blurb: string; xp: number; level: number; progress: number }>;
   streak: { current: number; best: number; shields: number; activeToday: boolean; protectedDays: string[] };
   today: { done: number; target: number; xp: number };
   quests: Quest[];
@@ -256,9 +255,8 @@ export function computeGame(input: GameInput): GameState {
   const tinyCount = logs.filter((l) => !l.full_version).length;
   const deviceLogs = logs.filter((l) => l.source && l.source !== "manual").length;
   const bestWeekHabits = Math.max(0, ...metByWeek.values());
-  const a = (key: string, icon: string, title: string, description: string, current: number, target: number): Achievement => ({
+  const a = (key: string, title: string, description: string, current: number, target: number): Achievement => ({
     key,
-    icon,
     title,
     description,
     current: Math.min(current, target),
@@ -266,19 +264,19 @@ export function computeGame(input: GameInput): GameState {
     unlocked: current >= target,
   });
   const achievements: Achievement[] = [
-    a("primer_paso", "👣", "Primer paso", "Registra tu primer hábito.", logs.length, 1),
-    a("racha_3", "🔥", "Chispa", "3 días seguidos.", s.best, 3),
-    a("racha_7", "🔥", "Fogata", "7 días seguidos (ganas tu primer escudo).", s.best, 7),
-    a("racha_30", "🌋", "Fuego eterno", "30 días seguidos.", s.best, 30),
-    a("semana", "📅", "Semana cumplida", "Cumple la meta semanal de un hábito.", bestWeekHabits, 1),
-    a("tres_de_tres", "🏆", "Tres de tres", "Cumple la meta semanal de 3 hábitos en la misma semana.", bestWeekHabits, 3),
-    a("nunca_cero", "🌱", "Nunca cero", "Usa la versión mínima 5 veces: aparecer es lo que cuenta.", tinyCount, 5),
-    a("conocete", "🔬", "Conócete", "Sube tu primer examen.", examDays.length, 1),
-    a("revision", "🧭", "Brújula", "Haz 4 revisiones semanales.", checkinDays.length, 4),
-    a("conectado", "⌚", "Conectado", "Conecta Strava o Apple Salud.", input.deviceConnected ? 1 : 0, 1),
-    a("automatico", "⚡", "Piloto automático", "10 hábitos registrados por tu reloj.", deviceLogs, 10),
-    a("nivel_5", "⭐", "Rastreador", "Llega al nivel 5.", lv.level, 5),
-    a("mision", "🎯", "Misión cumplida", "Logra una de tus metas.", input.goalsAchieved, 1),
+    a("primer_paso", "Primer paso", "Registra tu primer hábito.", logs.length, 1),
+    a("racha_3", "Chispa", "3 días seguidos.", s.best, 3),
+    a("racha_7", "Fogata", "7 días seguidos (ganas tu primer escudo).", s.best, 7),
+    a("racha_30", "Fuego eterno", "30 días seguidos.", s.best, 30),
+    a("semana", "Semana cumplida", "Cumple la meta semanal de un hábito.", bestWeekHabits, 1),
+    a("tres_de_tres", "Tres de tres", "Cumple la meta semanal de 3 hábitos en la misma semana.", bestWeekHabits, 3),
+    a("nunca_cero", "Nunca cero", "Usa la versión mínima 5 veces: aparecer es lo que cuenta.", tinyCount, 5),
+    a("conocete", "Conócete", "Sube tu primer examen.", examDays.length, 1),
+    a("revision", "Brújula", "Haz 4 revisiones semanales.", checkinDays.length, 4),
+    a("conectado", "Conectado", "Conecta Strava o Apple Salud.", input.deviceConnected ? 1 : 0, 1),
+    a("automatico", "Piloto automático", "10 hábitos registrados por tu reloj.", deviceLogs, 10),
+    a("nivel_5", "Rastreador", "Llega al nivel 5.", lv.level, 5),
+    a("mision", "Misión cumplida", "Logra una de tus metas.", input.goalsAchieved, 1),
   ];
 
   // Heatmap: 12 weeks ending this week.

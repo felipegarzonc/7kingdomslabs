@@ -70,6 +70,15 @@ export async function logHabit(form: FormData): Promise<void> {
       .upsert({ habit_id: f.habit_id, participant_id: v.participant.id, day, full_version: f.mode === "full" }, { onConflict: "habit_id,day" });
   }
   revalidatePath("/app", "layout");
+  // The last habit of the day earns the celebration screen (immediate reward).
+  if (f.mode !== "undo" && day === today) {
+    const [active, logged] = await Promise.all([
+      supabase.from("habits").select("id").eq("participant_id", v.participant.id).eq("status", "active"),
+      supabase.from("habit_logs").select("habit_id").eq("participant_id", v.participant.id).eq("day", today),
+    ]);
+    const ids = new Set((logged.data ?? []).map((l) => l.habit_id));
+    if (active.data?.length && active.data.every((h) => ids.has(h.id))) redirect("/app/celebracion");
+  }
 }
 
 // ─── Managing habits ────────────────────────────────────────────────────────

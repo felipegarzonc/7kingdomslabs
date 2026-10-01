@@ -1,7 +1,9 @@
 import "server-only";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeGame, dayInColombia, type GameHabit, type GameLog, type GameState } from "@/domain/game";
 import { todayInColombia } from "@/domain/habits";
+import { createClient } from "@/lib/supabase/server";
 
 /** Everything the game engine needs, read with the participant's own (RLS) client. */
 export async function loadGame(supabase: SupabaseClient, participantId: string, opts: { goalsAchieved?: number } = {}): Promise<GameState> {
@@ -25,3 +27,6 @@ export async function loadGame(supabase: SupabaseClient, participantId: string, 
     goalsAchieved: opts.goalsAchieved ?? 0,
   });
 }
+
+/** One game computation per request, shared by the layout's side rail and the page. */
+export const getGame = cache(async (participantId: string, goalsAchieved = 0) => loadGame(await createClient(), participantId, { goalsAchieved }));

@@ -61,6 +61,11 @@ export async function runExtraction(documentId: string): Promise<void> {
   }
 
   // ── Automatic acceptance (no human review) ──
+  if (!extraction.results.length) {
+    // Not a lab panel at all (e.g. an imaging report): nothing for anyone to transcribe.
+    await db.from("lab_documents").update({ status: "failed", extraction_error: NO_LAB_RESULTS }).eq("id", documentId);
+    return;
+  }
   const { accepted, skipped } = autoAcceptRows(extraction.results);
   if (!accepted.length) {
     await db.from("lab_documents").update({ extraction_error: "Ningún valor del informe coincidió con el catálogo; revísalo a mano." }).eq("id", documentId);
@@ -88,6 +93,9 @@ export async function runExtraction(documentId: string): Promise<void> {
   const report = await publishAutomaticReport(db, participant.id);
   if ("error" in report) console.error(`automatic report for ${participant.id} failed:`, report.error);
 }
+
+export const NO_LAB_RESULTS =
+  "No encontramos resultados de laboratorio en este PDF. Bombadil interpreta exámenes de sangre u orina; los informes de imágenes (resonancias, ecografías, radiografías) no se pueden analizar.";
 
 function isIsoDate(s: string | null): s is string {
   return !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));

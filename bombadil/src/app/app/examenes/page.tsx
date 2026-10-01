@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { fmtDate } from "@/components/format";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireParticipant } from "@/lib/auth";
+import { NO_LAB_RESULTS } from "@/lib/jobs";
 import { createClient } from "@/lib/supabase/server";
 import { DOC_STATUS } from "@/components/doc-status";
 import { UploadForm } from "./upload-form";
@@ -16,7 +17,7 @@ export default async function LabsPage() {
   const supabase = await createClient();
   const { data: docs } = await supabase
     .from("lab_documents")
-    .select("id, original_filename, lab_name, sampled_on, status, created_at")
+    .select("id, original_filename, lab_name, sampled_on, status, created_at, extraction_error")
     .eq("participant_id", p.id)
     .order("created_at", { ascending: false });
 
@@ -39,6 +40,13 @@ export default async function LabsPage() {
                       <p className="text-xs text-muted">
                         Toma: {fmtDate(d.sampled_on)} · subido {fmtDate(d.created_at)}
                       </p>
+                      {d.status === "failed" ? (
+                        <p className="mt-1 text-xs text-warn">
+                          {d.extraction_error === NO_LAB_RESULTS ? NO_LAB_RESULTS : "No pudimos leer este PDF automáticamente (por ejemplo, si es escaneado). El equipo transcribirá los valores."}
+                        </p>
+                      ) : d.status === "extracted" ? (
+                        <p className="mt-1 text-xs text-muted">Ningún valor coincidió con los exámenes que interpretamos; el equipo lo revisará.</p>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-3">
                       <Badge tone={s.tone}>{s.label}</Badge>

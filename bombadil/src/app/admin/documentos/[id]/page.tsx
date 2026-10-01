@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fmtDateTime } from "@/components/format";
+import { ImagingView, imagingTitle } from "@/components/imaging-view";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Notice, PageHeader } from "@/components/ui";
 import { BIOMARKERS, matchBiomarker } from "@/domain/biomarkers";
 import { logAdminAccess } from "@/lib/audit";
 import { requireAdmin } from "@/lib/auth";
 import type { Extraction } from "@/lib/llm/extract";
+import type { StoredImaging } from "@/lib/llm/imaging";
 import { createClient } from "@/lib/supabase/server";
 import { rerunExtraction } from "../../actions";
 import { ReviewForm, type ReviewRowInput } from "./review-form";
@@ -96,12 +98,19 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         <Card className="min-h-[70vh] p-0 sm:p-0">
           <iframe src={`/admin/documentos/${id}/pdf`} title="PDF original" className="h-[70vh] w-full rounded-2xl" />
         </Card>
-        <Card title="Resultados extraídos">
-          <p className="mb-3 text-xs text-muted">
-            Marca solo las filas que correspondan a biomarcadores del catálogo, corrige lo necesario y confirma. Los valores se convierten a la unidad canónica y se clasifican con el rango del laboratorio cuando exista. Sexo: {p.sex ?? "—"}.
-          </p>
-          <ReviewForm documentId={id} rows={rows} sampledOn={doc.sampled_on} labName={doc.lab_name} biomarkers={BIOMARKERS.map((b) => ({ code: b.code, name: b.name, unit: b.unit }))} />
-        </Card>
+        {doc.kind === "imaging" && doc.imaging ? (
+          <div className="flex flex-col gap-2">
+            <h2 className="font-semibold">{imagingTitle(doc.imaging as StoredImaging)}</h2>
+            <ImagingView imaging={doc.imaging as StoredImaging} />
+          </div>
+        ) : (
+          <Card title="Resultados extraídos">
+            <p className="mb-3 text-xs text-muted">
+              Marca solo las filas que correspondan a biomarcadores del catálogo, corrige lo necesario y confirma. Los valores se convierten a la unidad canónica y se clasifican con el rango del laboratorio cuando exista. Sexo: {p.sex ?? "—"}.
+            </p>
+            <ReviewForm documentId={id} rows={rows} sampledOn={doc.sampled_on} labName={doc.lab_name} biomarkers={BIOMARKERS.map((b) => ({ code: b.code, name: b.name, unit: b.unit }))} />
+          </Card>
+        )}
       </div>
     </>
   );

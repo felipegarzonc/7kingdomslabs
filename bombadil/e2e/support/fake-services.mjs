@@ -193,6 +193,19 @@ const EXTRACTION = {
     { name_as_printed: "Ferritina", biomarker_code: null, value: 180, qualifier: null, unit: "ng/mL", ref_low: 30, ref_high: 400, section: "Química" },
   ],
 };
+const IMAGING = {
+  is_imaging_report: true,
+  modality: "resonancia",
+  body_region: "Rodilla izquierda",
+  study_date: "2026-09-24",
+  summary: "El menisco interno muestra un desgaste leve, sin rupturas, y hay irritación del tendón de la rótula.",
+  findings: [
+    { finding: "Meniscopatía grado II del menisco medial", explanation: "Desgaste interno del menisco sin ruptura; es frecuente.", relevance: "leve" },
+    { finding: "Ligamentos sin rupturas", explanation: "Los ligamentos principales de la rodilla están sanos.", relevance: "normal" },
+  ],
+  impression: "Desgaste leve del menisco y tendinosis patelar.",
+  questions_for_doctor: ["¿Qué ejercicios me convienen mientras sana el tendón?", "¿Necesito control con otra resonancia?"],
+};
 const REPORT = {
   headline: "Tus datos muestran un patrón compatible con resistencia a la insulina que vale la pena atender ahora.",
   worsened: ["HDL bajó a 37 mg/dL.", "Triglicéridos subieron a 231 mg/dL.", "ALT subió a 52 U/L."],
@@ -211,10 +224,14 @@ http
     const b = JSON.parse((await body(req)).toString() || "{}");
     const system = typeof b.system === "string" ? b.system : JSON.stringify(b.system ?? "");
     let text;
+    const user = JSON.stringify(b.messages);
+    const leaked = user.includes("JUAN") || user.includes("1.020.304.050");
     if (system.includes("transcribe informes")) {
-      const user = JSON.stringify(b.messages);
-      if (user.includes("JUAN") || user.includes("1.020.304.050")) text = JSON.stringify({ error: "PII LEAKED TO LLM" });
+      if (leaked) text = JSON.stringify({ error: "PII LEAKED TO LLM" });
+      else if (user.includes("RESONANCIA")) text = JSON.stringify({ lab_name: "Centro de Imágenes", sampled_on: "2026-09-24", results: [] });
       else text = JSON.stringify(EXTRACTION);
+    } else if (system.includes("informe de imágenes diagnósticas")) {
+      text = leaked ? JSON.stringify({ error: "PII LEAKED TO LLM" }) : JSON.stringify(IMAGING);
     } else if (system.includes("informe interpretativo")) text = JSON.stringify(REPORT);
     else text = "Semana sólida con la caminata. Esta semana intenta repetirla también el sábado.";
     json(res, 200, { id: `msg_${randomUUID()}`, type: "message", role: "assistant", model: b.model, content: [{ type: "text", text }], stop_reason: "end_turn", stop_sequence: null, usage: { input_tokens: 10, output_tokens: 10 } });

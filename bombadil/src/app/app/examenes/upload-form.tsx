@@ -17,7 +17,7 @@ export function UploadForm() {
       }}
       className="flex flex-col gap-4"
     >
-      <Field label="Archivo PDF del laboratorio" htmlFor="file" hint="PDF original del laboratorio (no foto). Máximo 15 MB.">
+      <Field label="Archivo PDF del laboratorio" htmlFor="file" hint="PDF original del laboratorio o del informe de imágenes (no foto). Máximo 15 MB.">
         <Input id="file" name="file" type="file" accept="application/pdf" required className="file:mr-3 file:rounded-lg file:border-0 file:bg-accent-soft file:px-3 file:py-1.5 file:text-sm file:font-medium" />
       </Field>
       <div className="grid grid-cols-2 gap-3">

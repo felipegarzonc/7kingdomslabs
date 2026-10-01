@@ -18,9 +18,28 @@ const LINES = [
   "Ferritina             180    ng/mL     30 - 400",
 ];
 
+/** SYNTHETIC radiology report: text findings, no lab values. */
+const IMAGING_LINES = [
+  "CENTRO DE IMAGENES SINTETICO",
+  "Paciente: JUAN CARLOS PEREZ GOMEZ     Documento: CC 1.020.304.050",
+  "Fecha del examen: 2026/09/24",
+  "RESONANCIA MAGNETICA SIMPLE DE LA RODILLA IZQUIERDA",
+  "HALLAZGOS: Menisco medial con meniscopatia grado II, sin evidencia de ruptura.",
+  "Ligamentos cruzados preservados. No se identifica quiste de Baker.",
+  "IMPRESION: Meniscopatia grado II del menisco medial. Tendinosis patelar.",
+];
+
+export function makeImagingPdf(file: string) {
+  writePdf(file, IMAGING_LINES);
+}
+
 export function makeLabPdf(file: string) {
+  writePdf(file, LINES);
+}
+
+function writePdf(file: string, lines: string[]) {
   const esc = (s: string) => s.replace(/[\\()]/g, (c) => "\\" + c);
-  const stream = ["BT", "/F1 11 Tf", "50 780 Td", "14 TL", ...LINES.map((l) => `(${esc(l)}) Tj T*`), "ET"].join("\n");
+  const stream = ["BT", "/F1 11 Tf", "50 780 Td", "14 TL", ...lines.map((l) => `(${esc(l)}) Tj T*`), "ET"].join("\n");
   const objs = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",

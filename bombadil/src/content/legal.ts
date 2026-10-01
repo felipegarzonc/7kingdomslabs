@@ -10,7 +10,7 @@ export const OPERATOR = {
   city: "Bogotá, Colombia",
 };
 
-export const CONSENT_VERSION = "2026-10-v2";
+export const CONSENT_VERSION = "2026-10-v3";
 
 export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
@@ -21,7 +21,7 @@ export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
     title: "Qué datos tratamos",
     body:
-      "Datos de identificación y contacto (nombre, correo), datos básicos (fecha de nacimiento, sexo, estatura) y datos de salud, que son datos sensibles: resultados de exámenes de laboratorio, mediciones (peso, cintura, presión arterial, frecuencia cardiaca, sueño, ejercicio), respuestas a los check-ins semanales y tus metas.",
+      "Datos de identificación y contacto (nombre, correo), datos básicos (fecha de nacimiento, sexo, estatura) y datos de salud, que son datos sensibles: resultados de exámenes de laboratorio, informes de imágenes diagnósticas (resonancias, ecografías, radiografías, tomografías), mediciones (peso, cintura, presión arterial, frecuencia cardiaca, sueño, ejercicio), respuestas a los check-ins semanales y tus metas.",
   },
   {
     title: "Para qué los usamos",
@@ -36,7 +36,7 @@ export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
     title: "Análisis automático",
     body:
-      "La transcripción de tus exámenes y los informes interpretativos se generan y publican de forma automática, sin revisión humana previa. Solo se guardan los valores que el sistema reconoce con certeza; las alertas de salud se calculan con reglas fijas, no con inteligencia artificial. El operador del piloto puede revisar y corregir tus datos después, y cada acceso suyo queda registrado.",
+      "La transcripción de tus exámenes, la explicación de tus informes de imágenes y los informes interpretativos se generan y publican de forma automática, sin revisión humana previa. Solo se guardan los valores que el sistema reconoce con certeza; las alertas de salud se calculan con reglas fijas, no con inteligencia artificial. El operador del piloto puede revisar y corregir tus datos después, y cada acceso suyo queda registrado.",
   },
   {
     title: "Alertas",

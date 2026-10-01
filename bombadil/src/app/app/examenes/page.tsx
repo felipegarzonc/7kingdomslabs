@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { fmtDate } from "@/components/format";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
 import { requireParticipant } from "@/lib/auth";
 import { NO_LAB_RESULTS } from "@/lib/jobs";
 import { createClient } from "@/lib/supabase/server";
 import { DOC_STATUS } from "@/components/doc-status";
+import { imagingTitle } from "@/components/imaging-view";
+import type { StoredImaging } from "@/lib/llm/imaging";
 import { UploadForm } from "./upload-form";
 
 export const metadata: Metadata = { title: "Exámenes" };
@@ -17,13 +20,13 @@ export default async function LabsPage() {
   const supabase = await createClient();
   const { data: docs } = await supabase
     .from("lab_documents")
-    .select("id, original_filename, lab_name, sampled_on, status, created_at, extraction_error")
+    .select("id, original_filename, lab_name, sampled_on, status, created_at, extraction_error, kind, imaging")
     .eq("participant_id", p.id)
     .order("created_at", { ascending: false });
 
   return (
     <>
-      <PageHeader title="Exámenes" subtitle="Sube tus exámenes de cualquier laboratorio y año. Entre más historia, mejor la lectura de tendencias." />
+      <PageHeader title="Exámenes" subtitle="Sube exámenes de laboratorio e informes de imágenes de cualquier año. Entre más historia, mejor la lectura de tendencias." />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <Card title="Subir un examen" className="self-start">
           <UploadForm />
@@ -36,9 +39,15 @@ export default async function LabsPage() {
                 return (
                   <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{d.lab_name ?? d.original_filename ?? "Examen"}</p>
+                      {d.kind === "imaging" && d.imaging ? (
+                        <Link href={`/app/examenes/${d.id}`} className="block truncate font-medium text-accent underline">
+                          {imagingTitle(d.imaging as StoredImaging)}
+                        </Link>
+                      ) : (
+                        <p className="truncate font-medium">{d.lab_name ?? d.original_filename ?? "Examen"}</p>
+                      )}
                       <p className="text-xs text-muted">
-                        Toma: {fmtDate(d.sampled_on)} · subido {fmtDate(d.created_at)}
+                        {d.kind === "imaging" ? "Estudio" : "Toma"}: {fmtDate(d.sampled_on)} · subido {fmtDate(d.created_at)}
                       </p>
                       {d.status === "failed" ? (
                         <p className="mt-1 text-xs text-warn">
@@ -49,7 +58,7 @@ export default async function LabsPage() {
                       ) : null}
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge tone={s.tone}>{s.label}</Badge>
+                      <Badge tone={s.tone}>{d.kind === "imaging" && d.status === "reviewed" ? "Interpretado" : s.label}</Badge>
                       <a href={`/app/examenes/${d.id}/pdf`} target="_blank" rel="noopener" className="text-xs font-medium text-accent">
                         Ver PDF
                       </a>
@@ -62,7 +71,7 @@ export default async function LabsPage() {
             <EmptyState title="Aún no has subido exámenes" />
           )}
           <p className="mt-4 text-xs text-muted">
-            Antes de transcribir, ocultamos tu nombre, documento y datos de contacto. La transcripción y el análisis son automáticos; solo se guardan los valores que el sistema reconoce con certeza, y el equipo puede corregirlos después.
+            Antes de leerlo, ocultamos tu nombre, documento y datos de contacto. Los exámenes de laboratorio se transcriben y analizan solos (solo se guardan los valores que el sistema reconoce con certeza). Los informes de imágenes (resonancias, ecografías, radiografías, tomografías) se explican en lenguaje sencillo. El equipo puede corregir todo después.
           </p>
         </Card>
       </div>

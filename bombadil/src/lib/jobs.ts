@@ -1,13 +1,16 @@
 import "server-only";
 import { autoAcceptRows } from "@/domain/auto-review";
+import { imagingAlarm } from "@/domain/imaging";
 import { buildSnapshot, metricLabel, MEASUREMENT_LABEL, MEASUREMENT_UNIT } from "@/domain/snapshot";
 import { GOAL_STATUS_LABEL } from "@/domain/goals";
 import type { ParticipantRow } from "@/lib/auth";
 import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
+import { raiseAlerts } from "@/lib/alerts";
 import { env } from "@/lib/env";
 import { commitLabResults } from "@/lib/lab-results";
 import { generateCheckinReply } from "@/lib/llm/checkin";
 import { extractLabResults, type Extraction } from "@/lib/llm/extract";
+import { interpretImaging, type StoredImaging } from "@/lib/llm/imaging";
 import { looksScanned, pdfToText } from "@/lib/pdf";
 import { redactPii } from "@/lib/redact";
 import { publishAutomaticReport } from "@/lib/reports";
@@ -31,6 +34,7 @@ export async function runExtraction(documentId: string): Promise<void> {
   await db.from("lab_documents").update({ status: "extracting", extraction_error: null }).eq("id", documentId);
   const participant = doc.participants as ParticipantRow;
   let extraction: Extraction;
+  let reportText: string;
   try {
     const file = await db.storage.from("lab-pdfs").download(doc.storage_path);
     if (file.error) throw new Error(`No se pudo leer el PDF: ${file.error.message}`);
@@ -40,12 +44,15 @@ export async function runExtraction(documentId: string): Promise<void> {
     }
     const names = [participant.display_name ?? "", participant.email.split("@")[0] ?? ""];
     const redacted = redactPii(text, names);
+    reportText = redacted.text;
     const out = await extractLabResults(redacted.text);
     extraction = out.extraction;
     await db
       .from("lab_documents")
       .update({
         status: "extracted",
+        kind: "lab",
+        imaging: null,
         extraction: out.extraction,
         prompt_version: out.promptVersion,
         model: out.model,
@@ -60,12 +67,13 @@ export async function runExtraction(documentId: string): Promise<void> {
     return;
   }
 
-  // ── Automatic acceptance (no human review) ──
+  // No lab values: it may be an imaging report (MRI, ultrasound, X-ray…).
   if (!extraction.results.length) {
-    // Not a lab panel at all (e.g. an imaging report): nothing for anyone to transcribe.
-    await db.from("lab_documents").update({ status: "failed", extraction_error: NO_LAB_RESULTS }).eq("id", documentId);
+    await runImagingInterpretation(db, documentId, doc, participant.id, reportText);
     return;
   }
+
+  // ── Automatic acceptance (no human review) ──
   const { accepted, skipped } = autoAcceptRows(extraction.results);
   if (!accepted.length) {
     await db.from("lab_documents").update({ extraction_error: "Ningún valor del informe coincidió con el catálogo; revísalo a mano." }).eq("id", documentId);
@@ -95,7 +103,47 @@ export async function runExtraction(documentId: string): Promise<void> {
 }
 
 export const NO_LAB_RESULTS =
-  "No encontramos resultados de laboratorio en este PDF. Bombadil interpreta exámenes de sangre u orina; los informes de imágenes (resonancias, ecografías, radiografías) no se pueden analizar.";
+  "No encontramos resultados de laboratorio ni un informe de imágenes en este PDF. Bombadil interpreta exámenes de sangre u orina e informes de resonancias, ecografías, radiografías y tomografías.";
+
+/**
+ * Plain-language interpretation of a radiology report. Alerts come from the
+ * report's own words (deterministic), never from the LLM's reading.
+ */
+async function runImagingInterpretation(
+  db: ReturnType<typeof createServiceClient>,
+  documentId: string,
+  doc: { sampled_on: string | null; created_at: string },
+  participantId: string,
+  reportText: string,
+): Promise<void> {
+  let imaging: StoredImaging;
+  try {
+    imaging = await interpretImaging(reportText);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await db.from("lab_documents").update({ status: "failed", extraction_error: `No se pudo interpretar el informe: ${message}`.slice(0, 500) }).eq("id", documentId);
+    return;
+  }
+  if (!imaging.is_imaging_report) {
+    await db.from("lab_documents").update({ status: "failed", extraction_error: NO_LAB_RESULTS }).eq("id", documentId);
+    return;
+  }
+  await db.from("lab_results").delete().eq("document_id", documentId);
+  await db
+    .from("lab_documents")
+    .update({
+      kind: "imaging",
+      imaging,
+      status: "reviewed",
+      reviewed_by: null,
+      reviewed_at: new Date().toISOString(),
+      extraction_error: null,
+      sampled_on: doc.sampled_on ?? (isIsoDate(imaging.study_date) ? imaging.study_date : String(doc.created_at).slice(0, 10)),
+    })
+    .eq("id", documentId);
+  await db.from("alerts").delete().eq("origin", "lab").eq("origin_id", documentId).eq("status", "open");
+  await raiseAlerts(db, participantId, imagingAlarm(reportText), "lab", documentId);
+}
 
 function isIsoDate(s: string | null): s is string {
   return !!s && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));

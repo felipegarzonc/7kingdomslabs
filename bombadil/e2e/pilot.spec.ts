@@ -12,7 +12,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { CONSENT_VERSION } from "../src/content/legal";
-import { makeLabPdf } from "./support/make-lab-pdf";
+import { makeImagingPdf, makeLabPdf } from "./support/make-lab-pdf";
 
 test.describe.configure({ mode: "serial" });
 
@@ -167,6 +167,27 @@ test("lab PDF: upload → masked extraction → automatic timeline and report; o
   await noHorizontalScroll(page);
   await page.getByRole("button", { name: /Confirmar revisión/ }).click();
   await expect(page.getByText(/Guardados 4 resultados/)).toBeVisible();
+});
+
+test("imaging report: upload → masked plain-language interpretation the participant can open", async ({ page }) => {
+  const pdf = path.join(mkdtempSync(path.join(tmpdir(), "bombadil-")), "resonancia.pdf");
+  makeImagingPdf(pdf);
+
+  await login(page, ANA);
+  await page.goto("/app/examenes");
+  await page.getByLabel("Archivo PDF del laboratorio").setInputFiles(pdf);
+  await page.getByRole("button", { name: "Subir examen" }).click();
+  await expect(page.getByText(/Examen recibido/)).toBeVisible();
+  await expect(async () => {
+    await page.goto("/app/examenes");
+    await expect(page.getByRole("link", { name: "Resonancia magnética · Rodilla izquierda" })).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
+  await expect(page.getByText("Interpretado")).toBeVisible();
+  await page.getByRole("link", { name: "Resonancia magnética · Rodilla izquierda" }).click();
+  await expect(page.getByText("Meniscopatía grado II del menisco medial")).toBeVisible();
+  await expect(page.getByText(/Qué ejercicios me convienen/)).toBeVisible();
+  await snap(page, "07b-imaging");
+  await noHorizontalScroll(page);
 });
 
 test("the operator can still draft, edit and publish a report by hand", async ({ page }) => {

@@ -127,7 +127,7 @@ test("weekly check-in with an alarm symptom escalates; the form fits a phone", a
   expect(Date.now() - started).toBeLessThan(120_000);
 });
 
-test("lab PDF: upload → masked extraction → human review → timeline", async ({ page }) => {
+test("lab PDF: upload → masked extraction → automatic timeline and report; operator can correct later", async ({ page }) => {
   const pdf = path.join(mkdtempSync(path.join(tmpdir(), "bombadil-")), "examen.pdf");
   makeLabPdf(pdf);
 
@@ -136,41 +136,37 @@ test("lab PDF: upload → masked extraction → human review → timeline", asyn
   await page.getByLabel("Archivo PDF del laboratorio").setInputFiles(pdf);
   await page.getByRole("button", { name: "Subir examen" }).click();
   await expect(page.getByText(/Examen recibido/)).toBeVisible();
-  await logout(page);
-
-  await login(page, ADMIN);
-  await page.goto("/admin/documentos");
-  await page.getByRole("link", { name: /examen\.pdf|Laboratorio Sintético/ }).first().click();
-  await page.waitForURL(/\/admin\/documentos\/[0-9a-f-]{36}$/);
-  // Extraction runs in the background after the upload response.
+  // Extraction, acceptance and the report run in the background after the upload response.
   await expect(async () => {
-    await page.reload();
-    await expect(page.getByText("Glicemia basal")).toBeVisible({ timeout: 2000 });
+    await page.goto("/app/linea-de-tiempo");
+    await expect(page.getByText("Colesterol HDL")).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 30_000 });
-  await expect(page.getByText(/datos enmascarados/)).toBeVisible();
-  await noHorizontalScroll(page);
-  // Ferritin is not in the catalog → unchecked by default.
-  await expect(page.getByRole("checkbox", { name: "Incluir fila 5" })).not.toBeChecked();
-  await page.getByRole("button", { name: /Confirmar revisión/ }).click();
-  await expect(page.getByText(/Guardados 4 resultados/)).toBeVisible();
-  await logout(page);
-
-  await login(page, ANA);
-  await page.goto("/app/linea-de-tiempo");
-  await expect(page.getByText("Colesterol HDL")).toBeVisible();
   await page.getByRole("link", { name: /Glucosa en ayunas/ }).click();
   // 5.7 mmol/L converted to canonical mg/dL.
   await expect(page.getByText("102,7").filter({ visible: true }).first()).toBeVisible();
   await snap(page, "07-marker-detail");
   await noHorizontalScroll(page);
-});
-
-test("report is drafted, approved by the operator and then visible", async ({ page }) => {
-  await login(page, ANA);
-  await page.goto("/app/informes");
-  await expect(page.getByText("Aún no tienes informes")).toBeVisible();
+  await expect(async () => {
+    await page.goto("/app/informes");
+    await expect(page.getByText(/patrón compatible con resistencia a la insulina/)).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 30_000 });
   await logout(page);
 
+  await login(page, ADMIN);
+  await page.goto("/admin/documentos?all=1");
+  await page.getByRole("link", { name: /examen\.pdf|Laboratorio Sintético/ }).first().click();
+  await page.waitForURL(/\/admin\/documentos\/[0-9a-f-]{36}$/);
+  await expect(page.getByText("Glicemia basal")).toBeVisible();
+  await expect(page.getByText(/datos enmascarados/)).toBeVisible();
+  // Ferritin is not in the catalog → not stored automatically, and listed for the operator.
+  await expect(page.getByText(/Sin guardar.*Ferritina/)).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Incluir fila 5" })).not.toBeChecked();
+  await noHorizontalScroll(page);
+  await page.getByRole("button", { name: /Confirmar revisión/ }).click();
+  await expect(page.getByText(/Guardados 4 resultados/)).toBeVisible();
+});
+
+test("the operator can still draft, edit and publish a report by hand", async ({ page }) => {
   await login(page, ADMIN);
   await page.goto("/admin/participantes");
   await page.getByRole("link", { name: "Ana Prueba" }).click();

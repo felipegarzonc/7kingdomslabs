@@ -13,18 +13,20 @@ metas cortas y un check-in semanal de menos de 2 minutos.
 | Participante (web móvil) | Operador (Felipe) |
 |---|---|
 | Consentimiento informado versionado + onboarding | Invita participantes por correo |
-| Sube PDFs de laboratorio | Revisa y corrige cada extracción al lado del PDF original |
-| Registra presión (brazo, día/noche), peso, cintura, FC, sueño, ejercicio, fuerza de agarre, VO2max y tragos de alcohol por semana | Genera, edita y aprueba informes antes de que el participante los vea |
+| Sube PDFs de laboratorio: se transcriben, guardan y analizan solos, con un informe nuevo publicado automáticamente | Corrige cualquier extracción al lado del PDF original (y transcribe a mano las que fallan) |
+| Registra presión (brazo, día/noche), peso, cintura, FC, sueño, ejercicio, fuerza de agarre, VO2max y tragos de alcohol por semana | Puede generar, editar y publicar informes a mano además de los automáticos |
 | Línea de tiempo por marcador con rango de referencia y tendencia | Revisa y envía las respuestas a los check-ins |
 | Métricas derivadas: IMC, cintura/estatura, no-HDL, TG/HDL, FIB-4 (hígado), síndrome metabólico (ATP III e IDF), descenso nocturno de PA | Panel del piloto: retención semana a semana, efecto medible, disposición a pagar |
 | Metas a 3/6/12 meses con estado (en camino / estancada / retrocediendo) | Alertas deterministas (urgencia / consultar pronto / próxima cita) |
 | Check-in semanal con respuesta del equipo | Registro de auditoría de cada acceso a datos |
-| Informes aprobados; exportar o eliminar todos sus datos | Exportar o eliminar datos de un participante |
+| Informes publicados; exportar o eliminar todos sus datos | Exportar o eliminar datos de un participante |
 
 **Límites de diseño:** el LLM solo (a) transcribe PDFs a JSON a partir de texto con datos personales
 enmascarados y (b) redacta a partir de datos ya calculados. Toda la lógica clínica vive en
 `src/domain` (puro, testeado) y las urgencias se deciden con reglas en `config/escalation-rules.json`,
-aunque la API del LLM falle. Nada llega al participante sin revisión humana, salvo las alertas de urgencia.
+aunque la API del LLM falle. Los exámenes se analizan sin revisión humana previa: solo se guardan
+automáticamente los valores del catálogo con unidad reconocida (`src/domain/auto-review.ts`); el resto queda
+listado para el operador. Las respuestas a los check-ins siguen saliendo en borrador salvo `CHECKIN_AUTO_SEND=true`.
 
 ## Stack
 
@@ -125,13 +127,13 @@ La extracción de PDFs y la generación de informes pueden tardar hasta ~1 minut
 
 1. **Usuario cero:** invítate como participante con tu mismo correo de operador. `/` te lleva al panel;
    tu vista de participante está en `/app` (la primera vez pasa por el consentimiento y el onboarding). Luego sube tus exámenes 2023, 2025 y 2026 y registra el MAPA como mediciones de presión
-   marcando *Noche* en las lecturas nocturnas. Revisa cada extracción en **Exámenes**, genera el informe y compara
+   marcando *Noche* en las lecturas nocturnas. Revisa las extracciones en **Exámenes** y el informe automático, y compara
    con tu análisis manual (criterio §10 del brief).
 2. **Invitar:** Panel → *Invitar participante*. El correo lleva el código; si el participante no lo recibe,
    puede pedir otro en `/login`.
-3. **Cada semana:** revisa *Check-ins* (respuestas generadas en borrador), *Alertas* y *Exámenes* pendientes.
-4. **Informes:** en la ficha del participante → *Generar borrador de informe* → edita → *Aprobar y publicar*.
-   Al aprobar, las prioridades del informe pasan a ser las del participante.
+3. **Cada semana:** revisa *Check-ins* (respuestas generadas en borrador), *Alertas* y los *Exámenes* que fallaron o tienen valores sin guardar.
+4. **Informes:** cada examen nuevo publica un informe automático y sus prioridades pasan a ser las del
+   participante. Para uno a mano: ficha del participante → *Generar borrador de informe* → edita → *Aprobar y publicar*.
 5. **Disposición a pagar:** los participantes ven la pregunta desde la semana 6; también puedes registrarla
    tras una conversación desde su ficha.
 

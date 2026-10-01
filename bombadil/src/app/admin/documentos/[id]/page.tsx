@@ -69,7 +69,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         action={
           <form action={rerunExtraction}>
             <input type="hidden" name="document_id" value={id} />
-            <SubmitButton variant="secondary" pendingText="Extrayendo…" confirm={doc.status === "reviewed" ? "Ya está revisado. ¿Volver a extraer? (no cambia los resultados guardados hasta que confirmes la revisión)" : undefined}>
+            <SubmitButton variant="secondary" pendingText="Extrayendo…" confirm={doc.status === "reviewed" ? "Volver a extraer reemplaza los resultados guardados (incluidas tus correcciones) y publica un informe nuevo. ¿Continuar?" : undefined}>
               Volver a extraer
             </SubmitButton>
           </form>
@@ -80,6 +80,11 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
           <Notice tone="warn" title="La extracción automática falló">
             {doc.extraction_error} Puedes transcribir los valores a mano en la tabla.
           </Notice>
+        </div>
+      ) : null}
+      {doc.status !== "failed" && doc.extraction_error ? (
+        <div className="mb-4">
+          <Notice tone="info">{doc.extraction_error}</Notice>
         </div>
       ) : null}
       {doc.status === "extracting" || doc.status === "uploaded" ? (

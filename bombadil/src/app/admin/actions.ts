@@ -5,15 +5,13 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { z } from "zod";
 import { BIOMARKER_BY_CODE } from "@/domain/biomarkers";
-import { canConvert, classify, toCanonical } from "@/domain/classify";
-import { evaluateEscalation } from "@/domain/escalation";
-import { fib4 } from "@/domain/derived";
+import { canConvert } from "@/domain/classify";
 import { deadlineFor } from "@/domain/goals";
-import { ageFrom, buildSnapshot } from "@/domain/snapshot";
+import { buildSnapshot } from "@/domain/snapshot";
 import { deleteParticipantCompletely } from "@/lib/account";
-import { raiseAlerts } from "@/lib/alerts";
 import { logAdminAccess } from "@/lib/audit";
 import { requireAdmin, type ParticipantRow } from "@/lib/auth";
+import { commitLabResults } from "@/lib/lab-results";
 import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { env } from "@/lib/env";
 import { runCheckinReply, runExtraction } from "@/lib/jobs";
@@ -228,59 +226,18 @@ export async function saveReview(_prev: AdminState, form: FormData): Promise<Adm
   if (dup) problems.push(`${BIOMARKER_BY_CODE.get(dup)!.name} aparece dos veces; deja solo una fila.`);
   if (problems.length) return { error: problems.join(" ") };
 
-  const results = rows.map((r) => {
-    const canonical = toCanonical(r.code, r.value, r.unit);
-    const refLow = r.low !== null ? toCanonical(r.code, r.low, r.unit) : null;
-    const refHigh = r.high !== null ? toCanonical(r.code, r.high, r.unit) : null;
-    const cls = classify(r.code, canonical, participant.sex ?? "male", refLow !== null || refHigh !== null ? { low: refLow ?? undefined, high: refHigh ?? undefined } : null);
-    const original = extraction[r.index];
-    const corrected =
-      !original || original.biomarker_code !== r.code || original.value !== r.value || (original.unit ?? "") !== r.unit || original.ref_low !== r.low || original.ref_high !== r.high;
-    return {
-      document_id: documentId,
-      participant_id: doc.participant_id,
-      biomarker_code: r.code,
-      sampled_on: sampledOn,
-      value_original: r.value,
-      unit_original: r.unit,
-      value_canonical: canonical,
-      lab_ref_low: refLow,
-      lab_ref_high: refHigh,
-      flag: cls.flag,
-      corrected_by_admin: corrected,
-    };
+  const reviewed = rows.map((r) => {
+    const o = extraction[r.index];
+    const corrected = !o || o.biomarker_code !== r.code || o.value !== r.value || (o.unit ?? "") !== r.unit || o.ref_low !== r.low || o.ref_high !== r.high;
+    return { ...r, corrected };
   });
-
-  const del = await supabase.from("lab_results").delete().eq("document_id", documentId);
-  if (del.error) return { error: del.error.message };
-  if (results.length) {
-    const ins = await supabase.from("lab_results").insert(results);
-    if (ins.error) return { error: ins.error.message };
-  }
-  await supabase
-    .from("lab_documents")
-    .update({ status: "reviewed", reviewed_by: admin.userId, reviewed_at: new Date().toISOString(), sampled_on: sampledOn, lab_name: labName })
-    .eq("id", documentId);
-
-  // Deterministic escalation on the reviewed values (replaces earlier alerts from this document).
-  await supabase.from("alerts").delete().eq("origin", "lab").eq("origin_id", documentId).eq("status", "open");
-  const value = (code: string) => results.find((r) => r.biomarker_code === code)?.value_canonical;
-  const ageAtSample = ageFrom(participant.birth_date, new Date(sampledOn));
-  const ast = value("ast");
-  const alt = value("alt");
-  const plt = value("platelets");
-  const fib4Value = ageAtSample !== null && ast !== undefined && alt !== undefined && plt !== undefined ? fib4(ageAtSample, ast, alt, plt) : null;
-  const triggered = evaluateEscalation({
-    sex: participant.sex ?? "male",
-    age: ageAtSample,
-    biomarkers: results.map((r) => ({ code: r.biomarker_code, value: r.value_canonical })),
-    derived: fib4Value !== null ? [{ metric: "fib4", value: fib4Value }] : [],
-  });
-  await raiseAlerts(supabase, doc.participant_id, triggered, "lab", documentId);
-  await logAdminAccess(supabase, admin.userId, "review_lab", doc.participant_id, { document_id: documentId, results: results.length, corrections: results.filter((r) => r.corrected_by_admin).length });
+  const corrections = reviewed.filter((r) => r.corrected).length;
+  const committed = await commitLabResults(supabase, { documentId, participant, sampledOn, labName, reviewedBy: admin.userId, rows: reviewed });
+  if (committed.error) return { error: committed.error };
+  await logAdminAccess(supabase, admin.userId, "review_lab", doc.participant_id, { document_id: documentId, results: committed.count, corrections });
 
   revalidatePath("/admin", "layout");
-  return { ok: true, message: `Guardados ${results.length} resultados (${results.filter((r) => r.corrected_by_admin).length} corregidos a mano).` };
+  return { ok: true, message: `Guardados ${committed.count} resultados (${corrections} corregidos a mano).` };
 }
 
 // ─── Reports ────────────────────────────────────────────────────────────────

@@ -1,13 +1,16 @@
 import "server-only";
+import { autoAcceptRows } from "@/domain/auto-review";
 import { buildSnapshot, metricLabel, MEASUREMENT_LABEL, MEASUREMENT_UNIT } from "@/domain/snapshot";
 import { GOAL_STATUS_LABEL } from "@/domain/goals";
 import type { ParticipantRow } from "@/lib/auth";
 import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { env } from "@/lib/env";
+import { commitLabResults } from "@/lib/lab-results";
 import { generateCheckinReply } from "@/lib/llm/checkin";
-import { extractLabResults } from "@/lib/llm/extract";
+import { extractLabResults, type Extraction } from "@/lib/llm/extract";
 import { looksScanned, pdfToText } from "@/lib/pdf";
 import { redactPii } from "@/lib/redact";
+import { publishAutomaticReport } from "@/lib/reports";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 /**
@@ -16,11 +19,18 @@ import { createServiceClient } from "@/lib/supabase/admin";
  * caller must have authorised the actor for this participant first.
  */
 
+/**
+ * PDF → redacted text → LLM extraction → automatic acceptance of the rows the
+ * catalog can interpret → alerts → a new published report. The operator can
+ * still open the document and correct it afterwards.
+ */
 export async function runExtraction(documentId: string): Promise<void> {
   const db = createServiceClient();
-  const { data: doc, error } = await db.from("lab_documents").select("*, participants(email, display_name)").eq("id", documentId).single();
+  const { data: doc, error } = await db.from("lab_documents").select("*, participants(*)").eq("id", documentId).single();
   if (error || !doc) throw new Error(`document ${documentId} not found`);
   await db.from("lab_documents").update({ status: "extracting", extraction_error: null }).eq("id", documentId);
+  const participant = doc.participants as ParticipantRow;
+  let extraction: Extraction;
   try {
     const file = await db.storage.from("lab-pdfs").download(doc.storage_path);
     if (file.error) throw new Error(`No se pudo leer el PDF: ${file.error.message}`);
@@ -28,10 +38,10 @@ export async function runExtraction(documentId: string): Promise<void> {
     if (looksScanned(text, pages)) {
       throw new Error("El PDF no tiene texto seleccionable (parece escaneado). Transcribe los valores manualmente en la revisión.");
     }
-    const p = doc.participants as { email: string; display_name: string | null } | null;
-    const names = [p?.display_name ?? "", p?.email.split("@")[0] ?? ""];
+    const names = [participant.display_name ?? "", participant.email.split("@")[0] ?? ""];
     const redacted = redactPii(text, names);
     const out = await extractLabResults(redacted.text);
+    extraction = out.extraction;
     await db
       .from("lab_documents")
       .update({
@@ -47,7 +57,36 @@ export async function runExtraction(documentId: string): Promise<void> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     await db.from("lab_documents").update({ status: "failed", extraction_error: message.slice(0, 500) }).eq("id", documentId);
+    return;
   }
+
+  // ── Automatic acceptance (no human review) ──
+  const { accepted, skipped } = autoAcceptRows(extraction.results);
+  if (!accepted.length) {
+    await db.from("lab_documents").update({ extraction_error: "Ningún valor del informe coincidió con el catálogo; revísalo a mano." }).eq("id", documentId);
+    return;
+  }
+  // Without a printed sample date, the upload date is the best available stand-in.
+  const sampledOn = doc.sampled_on ?? (isIsoDate(extraction.sampled_on) ? extraction.sampled_on : String(doc.created_at).slice(0, 10));
+  const committed = await commitLabResults(db, {
+    documentId,
+    participant,
+    sampledOn,
+    labName: doc.lab_name ?? extraction.lab_name,
+    rows: accepted.map((r) => ({ ...r, corrected: false })),
+    reviewedBy: null,
+  });
+  if (committed.error) {
+    await db.from("lab_documents").update({ status: "extracted", extraction_error: `No se pudieron guardar los resultados: ${committed.error}`.slice(0, 500) }).eq("id", documentId);
+    return;
+  }
+  if (skipped.length) {
+    const names = skipped.map((x) => x.name).join(", ");
+    await db.from("lab_documents").update({ extraction_error: `Guardado automáticamente. Sin guardar (fuera del catálogo o unidad no reconocida): ${names}`.slice(0, 500) }).eq("id", documentId);
+  }
+
+  const report = await publishAutomaticReport(db, participant.id);
+  if ("error" in report) console.error(`automatic report for ${participant.id} failed:`, report.error);
 }
 
 function isIsoDate(s: string | null): s is string {

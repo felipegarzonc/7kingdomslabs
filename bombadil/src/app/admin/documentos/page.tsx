@@ -19,7 +19,7 @@ export default async function DocumentsQueue({ searchParams }: { searchParams: P
     <>
       <PageHeader
         title="Exámenes"
-        subtitle="Toda extracción pasa por revisión humana antes de llegar a la línea de tiempo."
+        subtitle="Las extracciones se guardan y analizan automáticamente. Aquí aparecen las que fallaron o no se pudieron guardar; puedes corregir cualquiera."
         action={
           <Link href={all ? "/admin/documentos" : "/admin/documentos?all=1"} className="text-sm text-accent">
             {all ? "Solo pendientes" : "Ver todos"}

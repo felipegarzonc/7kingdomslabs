@@ -54,7 +54,7 @@ export default async function LabsPage() {
             <EmptyState title="Aún no has subido exámenes" />
           )}
           <p className="mt-4 text-xs text-muted">
-            Antes de transcribir, ocultamos tu nombre, documento y datos de contacto. Un humano revisa cada transcripción antes de que aparezca en tu línea de tiempo.
+            Antes de transcribir, ocultamos tu nombre, documento y datos de contacto. La transcripción y el análisis son automáticos; solo se guardan los valores que el sistema reconoce con certeza, y el equipo puede corregirlos después.
           </p>
         </Card>
       </div>

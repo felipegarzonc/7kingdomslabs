@@ -10,7 +10,7 @@ export const OPERATOR = {
   city: "Bogotá, Colombia",
 };
 
-export const CONSENT_VERSION = "2026-09-v1";
+export const CONSENT_VERSION = "2026-10-v2";
 
 export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
@@ -34,9 +34,9 @@ export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
       "Usamos la API de Anthropic (Claude) para transcribir tus exámenes y redactar textos. Antes de enviar el texto de un examen se enmascaran tus datos identificativos (nombre, documento, teléfono, correo). Tus datos se almacenan en Supabase (base de datos cifrada en reposo y en tránsito). Estos proveedores actúan como encargados del tratamiento y pueden estar fuera de Colombia (transferencia internacional).",
   },
   {
-    title: "Revisión humana",
+    title: "Análisis automático",
     body:
-      "El operador del piloto revisa las transcripciones de tus exámenes y aprueba cada informe antes de que lo veas. Cada acceso del operador a tus datos queda registrado.",
+      "La transcripción de tus exámenes y los informes interpretativos se generan y publican de forma automática, sin revisión humana previa. Solo se guardan los valores que el sistema reconoce con certeza; las alertas de salud se calculan con reglas fijas, no con inteligencia artificial. El operador del piloto puede revisar y corregir tus datos después, y cada acceso suyo queda registrado.",
   },
   {
     title: "Alertas",

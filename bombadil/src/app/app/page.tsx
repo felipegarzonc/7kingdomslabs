@@ -125,7 +125,7 @@ export default async function ParticipantHome() {
 
         {pendingDocs.count ? (
           <p className="text-sm text-muted">
-            Tienes {pendingDocs.count} examen(es) en revisión por el equipo. <Link href="/app/examenes" className="text-accent underline">Ver</Link>
+            Tienes {pendingDocs.count} examen(es) en proceso. <Link href="/app/examenes" className="text-accent underline">Ver</Link>
           </p>
         ) : null}
 

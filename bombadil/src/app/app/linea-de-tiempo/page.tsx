@@ -36,10 +36,10 @@ export default async function TimelinePage() {
 
   return (
     <>
-      <PageHeader title="Línea de tiempo" subtitle="Todos tus exámenes revisados, de todos los laboratorios y años." />
+      <PageHeader title="Línea de tiempo" subtitle="Todos tus exámenes analizados, de todos los laboratorios y años." />
       {!snapshot.markers.length ? (
-        <EmptyState title="Aún no hay resultados revisados">
-          <p className="mb-3">Sube tus exámenes en PDF. Aparecerán aquí cuando el equipo revise la transcripción.</p>
+        <EmptyState title="Aún no hay resultados">
+          <p className="mb-3">Sube tus exámenes en PDF. Aparecerán aquí en uno o dos minutos.</p>
           <LinkButton href="/app/examenes">Subir exámenes</LinkButton>
         </EmptyState>
       ) : (

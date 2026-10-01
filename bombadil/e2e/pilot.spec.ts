@@ -159,9 +159,11 @@ test("lab PDF: upload → masked extraction → automatic timeline and report; o
   await page.waitForURL(/\/admin\/documentos\/[0-9a-f-]{36}$/);
   await expect(page.getByText("Glicemia basal")).toBeVisible();
   await expect(page.getByText(/datos enmascarados/)).toBeVisible();
-  // Ferritin is not in the catalog → not stored automatically, and listed for the operator.
+  // Ferritin is not in the catalog → not stored automatically, and listed for the operator;
+  // the review table now shows the 4 stored results.
   await expect(page.getByText(/Sin guardar.*Ferritina/)).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Incluir fila 5" })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Incluir fila 4" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Incluir fila 5" })).toHaveCount(0);
   await noHorizontalScroll(page);
   await page.getByRole("button", { name: /Confirmar revisión/ }).click();
   await expect(page.getByText(/Guardados 4 resultados/)).toBeVisible();

@@ -42,9 +42,22 @@ describe("parseAppleHealth", () => {
     expect(days).toEqual([{ day: "2026-10-01", exerciseMinutes: 0, steps: 8500, strength: true }]);
   });
 
+  it("reads HRV and deep/REM sleep", () => {
+    const { rows } = parseAppleHealth({
+      data: {
+        metrics: [
+          { name: "heart_rate_variability", units: "ms", data: [{ date: "2026-10-01 07:00:00 -0500", qty: 41.4 }, { date: "2026-10-01 22:00:00 -0500", qty: 52.6 }] },
+          { name: "sleep_analysis", units: "hr", data: [{ date: "2026-10-01", totalSleep: 7, deep: 1.24, rem: 1.66 }] },
+        ],
+      },
+    });
+    const by = (t: string) => rows.find((r) => r.type === t)?.value;
+    expect([by("hrv_ms"), by("sleep_hours"), by("sleep_deep_hours"), by("sleep_rem_hours")]).toEqual([47, 7, 1.2, 1.7]);
+  });
+
   it("falls back to sleep stages when there is no total", () => {
     const { rows } = parseAppleHealth({ data: { metrics: [{ name: "sleep_analysis", data: [{ date: "2026-10-01", asleep: 0, core: 4, deep: 1.1, rem: 1.5 }] }] } });
-    expect(rows[0].value).toBe(6.6);
+    expect(rows.find((r) => r.type === "sleep_hours")?.value).toBe(6.6);
   });
 
   it("accepts the flat Shortcuts format, one day or many", () => {
@@ -111,7 +124,7 @@ describe("deviceSummary", () => {
       "2026-10-01",
       7,
     );
-    expect(s).toEqual({ days: 7, steps_per_day: 7000, sleep_hours: null, exercise_minutes_per_week: 70, resting_hr: null });
+    expect(s).toEqual({ days: 7, steps_per_day: 7000, sleep_hours: null, exercise_minutes_per_week: 70, resting_hr: null, hrv_ms: null });
     expect(deviceSummary([], "2026-10-01")).toBeNull();
   });
 });

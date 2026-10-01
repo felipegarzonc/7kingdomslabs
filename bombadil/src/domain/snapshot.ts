@@ -381,6 +381,10 @@ export const MEASUREMENT_LABEL: Record<MeasurementType, string> = {
   vo2max: "VO2max estimado",
   alcohol_drinks: "Tragos de alcohol (semana)",
   steps: "Pasos (día)",
+  hrv_ms: "Variabilidad cardiaca (HRV)",
+  sleep_deep_hours: "Sueño profundo",
+  sleep_rem_hours: "Sueño REM",
+  protein_g: "Proteína (día)",
 };
 
 export const MEASUREMENT_TYPES = Object.keys(MEASUREMENT_LABEL) as MeasurementType[];
@@ -397,6 +401,10 @@ export const MEASUREMENT_UNIT: Record<MeasurementType, string> = {
   vo2max: "ml/kg/min",
   alcohol_drinks: "tragos",
   steps: "pasos",
+  hrv_ms: "ms",
+  sleep_deep_hours: "h",
+  sleep_rem_hours: "h",
+  protein_g: "g",
 };
 
 /** Plausibility bounds to catch typos on manual entry. */
@@ -412,4 +420,8 @@ export const MEASUREMENT_BOUNDS: Record<MeasurementType, [number, number]> = {
   vo2max: [10, 90],
   alcohol_drinks: [0, 150],
   steps: [0, 100000],
+  hrv_ms: [5, 300],
+  sleep_deep_hours: [0, 8],
+  sleep_rem_hours: [0, 8],
+  protein_g: [0, 400],
 };

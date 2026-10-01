@@ -18,7 +18,7 @@ export default async function MeasurementsPage() {
   const supabase = await createClient();
   const { measurements } = await loadParticipantData(supabase, p.id);
   const bp = pairBloodPressure(measurements.map((m) => ({ type: m.type, value: m.value, at: m.measured_at, groupId: m.group_id, context: m.context })));
-  const series = (["steps", "weight", "waist", "resting_hr", "sleep_hours", "exercise_minutes", "grip_strength", "vo2max", "alcohol_drinks"] as const)
+  const series = (["steps", "weight", "waist", "resting_hr", "hrv_ms", "sleep_hours", "sleep_deep_hours", "sleep_rem_hours", "exercise_minutes", "protein_g", "grip_strength", "vo2max", "alcohol_drinks"] as const)
     .map((t) => ({ t, points: measurements.filter((m) => m.type === t).map((m) => ({ at: m.measured_at, value: m.value })) }))
     .filter((s) => s.points.length);
   const recent = [...measurements].reverse().filter((m) => m.type !== "bp_diastolic").slice(0, 20);

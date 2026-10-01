@@ -1,8 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Device webhooks authenticate themselves (Strava verify token, personal upload link).
-const PUBLIC_PATHS = ["/inicio", "/login", "/auth", "/privacidad", "/consentimiento", "/estado", "/api/strava/webhook", "/api/ingest"];
+// Device webhooks and the reminder cron authenticate themselves (Strava verify token, personal
+// upload link, cron secret); the buddy page is reached by its unguessable token.
+const PUBLIC_PATHS = [
+  "/inicio",
+  "/login",
+  "/auth",
+  "/privacidad",
+  "/consentimiento",
+  "/estado",
+  "/compartir",
+  "/sw.js",
+  "/manifest.webmanifest",
+  "/api/strava/webhook",
+  "/api/ingest",
+  "/api/cron",
+];
 
 /** Refreshes the Supabase session cookie and keeps signed-out users out of the app. */
 export async function proxy(request: NextRequest) {

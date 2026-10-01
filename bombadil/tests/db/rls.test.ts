@@ -110,7 +110,7 @@ describe.skipIf(!url)("row level security", () => {
     await db?.end();
   });
 
-  const participantTables = ["participants", "consents", "measurements", "lab_documents", "lab_results", "checkins", "reports", "alerts", "checkin_replies", "habits", "habit_logs", "device_connections"];
+  const participantTables = ["participants", "consents", "measurements", "lab_documents", "lab_results", "checkins", "reports", "alerts", "checkin_replies", "habits", "habit_logs", "device_connections", "push_subscriptions", "reminder_log", "habit_log_dismissals"];
 
   it.each(participantTables)("participant A cannot read B's rows in %s", async (table) => {
     const col = table === "participants" ? "id" : "participant_id";
@@ -181,6 +181,30 @@ describe.skipIf(!url)("row level security", () => {
     await q("insert into public.measurements (participant_id,type,value,unit,measured_at,source,external_id) values ($1,'steps',5000,'pasos',now(),'apple_health','day:2026-10-01')", [ids.pA]);
     await expect(q("insert into public.measurements (participant_id,type,value,unit,measured_at,source,external_id) values ($1,'steps',6000,'pasos',now(),'apple_health','day:2026-10-01')", [ids.pA])).rejects.toThrow(/measurements_external_unique/);
     await asA(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,'steps',1,'pasos',now()),($1,'steps',2,'pasos',now())", [ids.pA]));
+  });
+
+  it("engagement: dismissals, push subscriptions, preferences and the share link", async () => {
+    const ha = (await asA(() => q("insert into public.habits (participant_id,pillar,title,target_per_week,started_on) values ($1,'movimiento','Caminar',5,current_date) returning id", [ids.pA]))).rows[0].id;
+    const hb = (await asB(() => q("insert into public.habits (participant_id,pillar,title,target_per_week,started_on) values ($1,'fuerza','Sentadillas',3,current_date) returning id", [ids.pB]))).rows[0].id;
+    // A dismisses a device log on their own habit, but not on B's (even claiming to be A).
+    await asA(() => q("insert into public.habit_log_dismissals (habit_id, participant_id, day) values ($1,$2,current_date)", [ha, ids.pA]));
+    await expect(asA(() => q("insert into public.habit_log_dismissals (habit_id, participant_id, day) values ($1,$2,current_date)", [hb, ids.pA]))).rejects.toThrow(/row-level security/);
+    // Push subscriptions and the reminder log are written only by the server.
+    await expect(asA(() => q("insert into public.push_subscriptions (participant_id, endpoint, p256dh, auth) values ($1,'https://push.example/a','k','a')", [ids.pA]))).rejects.toThrow(/row-level security|permission denied/);
+    await q("insert into public.push_subscriptions (participant_id, endpoint, p256dh, auth) values ($1,'https://push.example/b','k','a')", [ids.pB]);
+    await q("insert into public.reminder_log (participant_id, habit_id, day, kind) values ($1,$2,current_date,'daily')", [ids.pB, hb]);
+    expect((await asA(() => q("select * from public.push_subscriptions"))).rowCount).toBe(0);
+    expect((await asB(() => q("select * from public.reminder_log"))).rowCount).toBe(1);
+    // Preferences and share token change only through the RPCs, and only for oneself.
+    await asA(() => q("select public.update_my_preferences(true, false)"));
+    const token = (await asA(() => q("select public.set_my_share(true) as t"))).rows[0].t;
+    expect(token).toMatch(/^[0-9a-f]{32}$/);
+    const a = await q("select preferences, share_token from public.participants where id = $1", [ids.pA]);
+    expect(a.rows[0]).toEqual({ preferences: { sober: true, reminders_email: false }, share_token: token });
+    expect((await q("select share_token from public.participants where id = $1", [ids.pB])).rows[0].share_token).toBeNull();
+    await asA(() => q("select public.set_my_share(false)"));
+    expect((await q("select share_token from public.participants where id = $1", [ids.pA])).rows[0].share_token).toBeNull();
+    await expect(as(null, null, () => q("select public.set_my_share(true)"))).rejects.toThrow(/permission denied/);
   });
 
   it("consent is recorded with version and hash", async () => {

@@ -6,6 +6,9 @@ import { Card, cx, LinkButton } from "@/components/ui";
 import { ATTRIBUTES } from "@/domain/game";
 import { todayInColombia } from "@/domain/habits";
 import { habitPath, type PathNode } from "@/domain/path";
+import { defaultReminderTime } from "@/domain/reminders";
+import { setReminderTime } from "@/app/app/actions";
+import { SubmitButton } from "@/components/submit-button";
 import { requireParticipant } from "@/lib/auth";
 import { loadHabits } from "@/lib/data/habits";
 import { createClient } from "@/lib/supabase/server";
@@ -139,6 +142,10 @@ export default async function PathPage({ searchParams }: { searchParams: Promise
             {ATTRIBUTES.find((a) => a.key === x.pillar)?.label ?? x.pillar}
           </Link>
         ))}
+        <Link href="/app/plan" className="flex items-center gap-2 rounded-full border-2 border-dashed border-border px-4 py-2 text-sm font-black text-muted hover:bg-surface-2">
+          <Icon name="list" size={18} />
+          Gestionar hábitos
+        </Link>
       </nav>
 
       <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border-b-[6px] border-black/25 bg-accent p-6 text-white dark:text-bg">
@@ -160,6 +167,25 @@ export default async function PathPage({ searchParams }: { searchParams: Promise
           Ajustar hábito
         </Link>
       </header>
+
+      <form action={setReminderTime} className="flex flex-wrap items-center gap-3 rounded-3xl border-2 border-border bg-surface p-4 text-sm">
+        <input type="hidden" name="habit_id" value={habit.id} />
+        <Icon name="bell" size={22} className="text-accent" />
+        <label htmlFor="reminder_time" className="font-bold">
+          Recordarme a las
+        </label>
+        <input
+          id="reminder_time"
+          name="reminder_time"
+          type="time"
+          defaultValue={(habit.reminder_time ?? defaultReminderTime(habit.anchor)).slice(0, 5)}
+          className="rounded-xl border-2 border-border bg-surface px-3 py-1.5 font-bold"
+        />
+        <SubmitButton variant="secondary">Guardar</SubmitButton>
+        <Link href="/app/datos" className="text-xs font-bold text-accent underline">
+          Activar recordatorios
+        </Link>
+      </form>
 
       <ol className="flex flex-col items-center gap-7 overflow-hidden py-4" aria-label={`Camino de ${habit.title}`}>
         {nodes.map((n, i) => (

@@ -105,6 +105,9 @@ const FLAT_KEYS: Record<string, MeasurementType> = {
   weight: "weight",
   exercise_minutes: "exercise_minutes",
   vo2max: "vo2max",
+  hrv_ms: "hrv_ms",
+  sleep_deep_hours: "sleep_deep_hours",
+  sleep_rem_hours: "sleep_rem_hours",
 };
 
 type Agg = "sum" | "mean" | "last";
@@ -115,6 +118,7 @@ const HAE_METRICS: Record<string, { type: MeasurementType; agg: Agg }> = {
   weight_body_mass: { type: "weight", agg: "last" },
   vo2_max: { type: "vo2max", agg: "last" },
   sleep_analysis: { type: "sleep_hours", agg: "sum" },
+  heart_rate_variability: { type: "hrv_ms", agg: "mean" },
 };
 
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -166,6 +170,10 @@ export function parseAppleHealth(payload: unknown): { rows: ImportedRow[]; days:
       for (const s of m.data ?? []) {
         const day = dayOf(s.date);
         if (!day) continue;
+        if (spec.type === "sleep_hours") {
+          if (isNum(s.deep) && s.deep > 0) add("sleep_deep_hours", "sum", day, s.deep);
+          if (isNum(s.rem) && s.rem > 0) add("sleep_rem_hours", "sum", day, s.rem);
+        }
         let v = spec.type === "sleep_hours" ? sleepHours(s) : isNum(s.qty) ? s.qty : null;
         if (v === null) continue;
         if (spec.type === "weight") v = toKg(v, m.units);
@@ -202,7 +210,7 @@ export function parseAppleHealth(payload: unknown): { rows: ImportedRow[]; days:
   const rows: ImportedRow[] = [];
   for (const e of acc.values()) {
     const v = e.agg === "sum" ? e.values.reduce((a, b) => a + b, 0) : e.agg === "mean" ? e.values.reduce((a, b) => a + b, 0) / e.values.length : e.values[e.values.length - 1];
-    const value = e.type === "steps" || e.type === "exercise_minutes" || e.type === "resting_hr" ? Math.round(v) : round1(v);
+    const value = e.type === "steps" || e.type === "exercise_minutes" || e.type === "resting_hr" || e.type === "hrv_ms" ? Math.round(v) : round1(v);
     rows.push({ type: e.type, value, measured_at: noonColombia(e.day), external_id: `day:${e.day}` });
   }
   rows.push(...bp);
@@ -250,6 +258,7 @@ export interface DeviceSummary {
   sleep_hours: number | null;
   exercise_minutes_per_week: number | null;
   resting_hr: number | null;
+  hrv_ms: number | null;
 }
 
 /** Averages of the last `days` days of device data (null when there is none). */
@@ -269,11 +278,13 @@ export function deviceSummary(rows: Array<{ type: string; value: number; measure
   const steps = mean("steps");
   const sleep = mean("sleep_hours");
   const hr = mean("resting_hr");
+  const hrv = mean("hrv_ms");
   return {
     days,
     steps_per_day: steps === null ? null : Math.round(steps),
     sleep_hours: sleep === null ? null : round1(sleep),
     exercise_minutes_per_week: exercise.length ? Math.round((total / days) * 7) : null,
     resting_hr: hr === null ? null : Math.round(hr),
+    hrv_ms: hrv === null ? null : Math.round(hrv),
   };
 }

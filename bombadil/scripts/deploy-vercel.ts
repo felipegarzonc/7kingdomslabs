@@ -23,6 +23,7 @@ const anthropicKey = process.env.BOMBADIL_ANTHROPIC_API_KEY?.trim() ?? "";
 // Optional: a Strava API app (strava.com/settings/api) with callback domain = the site's domain.
 const stravaId = process.env.STRAVA_CLIENT_ID?.trim() ?? "";
 const stravaSecret = process.env.STRAVA_CLIENT_SECRET?.trim() ?? "";
+const resendKey = process.env.RESEND_API_KEY?.trim() ?? "";
 
 function need(name: string): string {
   const v = process.env[name]?.trim();
@@ -102,6 +103,7 @@ async function main() {
     envs.STRAVA_CLIENT_ID = { value: stravaId, type: "plain" };
     envs.STRAVA_CLIENT_SECRET = { value: stravaSecret, type: "sensitive" };
   }
+  if (resendKey) envs.RESEND_API_KEY = { value: resendKey, type: "sensitive" };
   const setEnv = async () => {
     step("Cargando variables de entorno");
     await api(V, vt, `/v10/projects/${project.id}/env?upsert=true${qa}`, {
@@ -153,6 +155,10 @@ async function main() {
     await ensureStravaWebhook(`${siteUrl}/api/strava/webhook`).catch((e) => console.warn(`  ⚠ Webhook de Strava: ${(e as Error).message}`));
   }
 
+  // ── Habit reminders: Supabase pg_cron calls the app every 15 minutes ──
+  step("Programando los recordatorios (pg_cron cada 15 minutos)");
+  await scheduleReminders(`${siteUrl}/api/cron/reminders`, service!).catch((e) => console.warn(`  ⚠ Recordatorios: ${(e as Error).message}`));
+
   // ── Self-check ──
   step("Revisando /estado");
   const html = await (await fetch(`${siteUrl}/estado`)).text();
@@ -177,6 +183,22 @@ async function ensureStravaWebhook(callbackUrl: string) {
   const res = await fetch(base, { method: "POST", body });
   if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
   step("  registrado");
+}
+
+/** Must match cronSecret() in src/lib/push.ts. */
+async function scheduleReminders(url: string, serviceKey: string) {
+  const { createHash } = await import("node:crypto");
+  const secret = createHash("sha256").update(`bombadil-cron:${serviceKey}`).digest("hex");
+  const lit = (v: string) => `'${v.replace(/'/g, "''")}'`;
+  const query = `
+    create extension if not exists pg_cron;
+    create extension if not exists pg_net;
+    select cron.unschedule(jobid) from cron.job where jobname = 'bombadil-reminders';
+    select cron.schedule('bombadil-reminders', '*/15 * * * *', ${lit(
+      `select net.http_post(url := ${lit(url)}, headers := jsonb_build_object('Authorization', ${lit(`Bearer ${secret}`)}, 'Content-Type', 'application/json'), body := '{}'::jsonb)`,
+    )});`;
+  await api("https://api.supabase.com", st, `/v1/projects/${SUPABASE_REF}/database/query`, { method: "POST", body: JSON.stringify({ query }) });
+  step("  programados");
 }
 
 main().catch((e) => fail(e instanceof Error ? e.message : String(e)));

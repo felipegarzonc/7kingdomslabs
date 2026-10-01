@@ -20,7 +20,7 @@ export async function deleteParticipantCompletely(participantId: string, authUse
 
 /** Everything we hold about a participant, for the right of access / portability. */
 export async function exportParticipantData(supabase: import("@supabase/supabase-js").SupabaseClient, participantId: string) {
-  const tables = ["consents", "lab_documents", "lab_results", "measurements", "goals", "checkins", "checkin_replies", "reports", "alerts", "pilot_feedback", "habits", "habit_logs", "device_connections"] as const;
+  const tables = ["consents", "lab_documents", "lab_results", "measurements", "goals", "checkins", "checkin_replies", "reports", "alerts", "pilot_feedback", "habits", "habit_logs", "device_connections", "push_subscriptions", "reminder_log", "habit_log_dismissals"] as const;
   const { data: participant } = await supabase.from("participants").select("*").eq("id", participantId).single();
   const out: Record<string, unknown> = { exported_at: new Date().toISOString(), participant };
   for (const t of tables) {

@@ -12,9 +12,12 @@ import { dayInColombia } from "@/domain/game";
 import { nextExamDue } from "@/domain/path";
 import { deviceSummary } from "@/domain/wearables";
 import { pilotWeek } from "@/domain/pilot";
-import { requireParticipant } from "@/lib/auth";
+import { prefsOf, requireParticipant } from "@/lib/auth";
+import { buildSnapshot } from "@/domain/snapshot";
 import { getGame } from "@/lib/data/game";
 import { loadHabits } from "@/lib/data/habits";
+import { participantLe8 } from "@/lib/data/le8";
+import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import type { ReportContent } from "@/lib/llm/report";
 import { syncStrava } from "@/lib/strava";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -41,7 +44,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const supabase = await createClient();
   const week = p.pilot_start ? pilotWeek(p.pilot_start) : 1;
   const today = todayInColombia();
-  const [game, habits, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs, reportRes, docsRes, connsRes, deviceRes] = await Promise.all([
+  const [game, habits, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs, reportRes, docsRes, connsRes, deviceRes, data] = await Promise.all([
     getGame(p.id),
     loadHabits(supabase, p.id),
     supabase.from("checkins").select("id").eq("participant_id", p.id).eq("week", week).maybeSingle(),
@@ -53,7 +56,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     supabase.from("lab_documents").select("created_at", { count: "exact" }).eq("participant_id", p.id).order("created_at", { ascending: false }).limit(1),
     supabase.from("device_connections").select("id, participant_id, provider, status, last_sync_at").eq("participant_id", p.id),
     supabase.from("measurements").select("type, value, measured_at, source").eq("participant_id", p.id).in("source", ["strava", "apple_health"]).gte("measured_at", `${addDays(today, -14)}T00:00:00-05:00`),
+    loadParticipantData(supabase, p.id),
   ]);
+  const heart = participantLe8(p, data, buildSnapshot(toSnapshotInput(p, data)));
   const conns = connsRes.data ?? [];
   const strava = conns.find((c) => c.provider === "strava");
   if (strava && strava.status !== "revoked" && staleSync(strava.last_sync_at)) after(() => syncStrava(createServiceClient(), strava, 3));
@@ -67,6 +72,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const reply = replyRes.data as { final_text: string; sent_at: string } | null;
   const lastExam = docsRes.data?.[0]?.created_at ? dayInColombia(docsRes.data[0].created_at) : null;
   const exam = nextExamDue(lastExam, today);
+  const { sober } = prefsOf(p);
   const firstName = p.display_name?.split(" ")[0];
   const headline = !active.length
     ? "Arma tu plan y empieza a sumar experiencia hoy."
@@ -79,7 +85,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     tiles.push({ label: "Pasos hoy", value: stepsToday !== undefined ? Number(stepsToday).toLocaleString("es-CO") : "—", hint: devices.steps_per_day ? `Promedio: ${devices.steps_per_day.toLocaleString("es-CO")}` : "Sin datos de pasos" });
     tiles.push({ label: "Sueño", value: devices.sleep_hours !== null ? `${devices.sleep_hours.toLocaleString("es-CO")} h` : "—", hint: "Promedio de 7 noches" });
     tiles.push({ label: "Ejercicio", value: devices.exercise_minutes_per_week !== null ? `${devices.exercise_minutes_per_week} min` : "—", hint: "Por semana" });
+    if (devices.hrv_ms !== null) tiles.push({ label: "HRV", value: `${devices.hrv_ms} ms`, hint: "Variabilidad cardiaca, promedio" });
   }
+  if (heart) tiles.push({ label: "Esencial 8", value: `${heart.score}/100`, hint: `Salud del corazón · ${heart.components.length} de 8`, href: "/app/progreso" });
   tiles.push(
     exam
       ? { label: "Próximo jefe", value: exam.daysLeft > 0 ? `En ${exam.daysLeft} días` : "¡Ya toca!", hint: "Examen de control", href: "/app/misiones" }
@@ -97,7 +105,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         {active.length ? <DayRing done={doneToday} target={active.length} onDark /> : null}
       </header>
 
-      {allDone ? (
+      {allDone && !sober ? (
         <Link
           href="/app/celebracion"
           className="flex items-center gap-3 rounded-2xl border-2 border-b-[5px] border-gold bg-gold-soft px-5 py-4 font-black text-[#3b2a05] dark:text-gold"
@@ -120,14 +128,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
                 Ver el camino
               </Link>
               <Link href="/app/plan" className="text-accent">
-                Ajustar mi plan
+                Ajustar hábitos
               </Link>
             </div>
           </div>
           {p.personal_goal ? <p className="-mt-2 text-sm font-semibold text-muted">Rumbo a: «{p.personal_goal}»</p> : null}
           <ul className="flex flex-col gap-4">
             {active.map((h) => (
-              <HabitCard key={h.id} habit={h} today={today} />
+              <HabitCard key={h.id} habit={h} today={today} sober={sober} />
             ))}
           </ul>
           {suggested.length ? (

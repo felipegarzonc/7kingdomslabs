@@ -63,7 +63,9 @@ export async function storeImport(
   let habitsLogged = 0;
   if (data.days.length) {
     const { data: habits } = await db.from("habits").select("id, pillar, status, started_on").eq("participant_id", participant.id).eq("status", "active");
-    const logs = autoHabitLogs((habits ?? []) as HabitForAutoLog[], data.days, todayInColombia());
+    const { data: dismissed } = await db.from("habit_log_dismissals").select("habit_id, day").eq("participant_id", participant.id);
+    const skip = new Set((dismissed ?? []).map((d) => `${d.habit_id}:${d.day}`));
+    const logs = autoHabitLogs((habits ?? []) as HabitForAutoLog[], data.days, todayInColombia()).filter((l) => !skip.has(`${l.habit_id}:${l.day}`));
     if (logs.length) {
       const { data: inserted, error } = await db
         .from("habit_logs")

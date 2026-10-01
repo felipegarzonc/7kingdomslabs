@@ -25,4 +25,9 @@ export const env = {
     const clientSecret = process.env.STRAVA_CLIENT_SECRET?.trim();
     return clientId && clientSecret ? { clientId, clientSecret } : null;
   },
+  /** Reminder emails go through Resend when a key is set; otherwise only web push. */
+  resend: () => {
+    const key = process.env.RESEND_API_KEY?.trim();
+    return key ? { key, from: process.env.REMINDER_EMAIL_FROM?.trim() || "Bombadil <recordatorios@resend.dev>" } : null;
+  },
 };

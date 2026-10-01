@@ -144,7 +144,8 @@ export function dayInColombia(iso: string): string {
   return new Date(Date.parse(iso) - 5 * 3600e3).toISOString().slice(0, 10);
 }
 
-function streakOf(activeDays: Set<string>, today: string) {
+/** `chestDays`: days a week's three quests were all completed; each one earns a shield too. */
+function streakOf(activeDays: Set<string>, today: string, chestDays: Set<string> = new Set()) {
   const sorted = [...activeDays].filter((d) => d <= today).sort();
   if (!sorted.length) return { current: 0, best: 0, shields: 0, protectedDays: [] as string[] };
   let current = 0;
@@ -153,6 +154,7 @@ function streakOf(activeDays: Set<string>, today: string) {
   let shields = 0;
   const protectedDays: string[] = [];
   for (let d = sorted[0]; d <= today; d = addDays(d, 1)) {
+    if (chestDays.has(d)) shields = Math.min(SHIELD_MAX, shields + 1);
     if (activeDays.has(d)) {
       current++;
       run++;
@@ -196,14 +198,17 @@ export function computeGame(input: GameInput): GameState {
   const logsByHabit = new Map<string, string[]>();
   for (const l of logs) logsByHabit.set(l.habit_id, [...(logsByHabit.get(l.habit_id) ?? []), l.day]);
   const metByWeek = new Map<string, number>();
+  /** Per week, the days on which each habit reached its weekly target. */
+  const metDaysByWeek = new Map<string, string[]>();
   for (const [habitId, days] of logsByHabit) {
     const h = habitById.get(habitId)!;
-    const perWeek = new Map<string, number>();
-    for (const d of days) perWeek.set(weekStart(d), (perWeek.get(weekStart(d)) ?? 0) + 1);
-    for (const [ws, n] of perWeek) {
-      if (n >= h.target_per_week) {
+    const perWeek = new Map<string, string[]>();
+    for (const d of days) perWeek.set(weekStart(d), [...(perWeek.get(weekStart(d)) ?? []), d]);
+    for (const [ws, ds] of perWeek) {
+      if (ds.length >= h.target_per_week) {
         addAttr(h.pillar, XP.weeklyTargetMet);
         metByWeek.set(ws, (metByWeek.get(ws) ?? 0) + 1);
+        metDaysByWeek.set(ws, [...(metDaysByWeek.get(ws) ?? []), ds.sort()[h.target_per_week - 1]]);
       }
     }
   }
@@ -218,9 +223,7 @@ export function computeGame(input: GameInput): GameState {
   if (checkinDays.includes(today)) todayXp += XP.checkin;
   if (measurementDays.includes(today)) todayXp += XP.measurementDay;
 
-  // Streak over days with any habit logged.
   const activeDays = new Set(logs.map((l) => l.day));
-  const s = streakOf(activeDays, today);
 
   // Weekly quests (fresh start each Monday); past completed weeks pay out too.
   const active = input.habits.filter((h) => h.status === "active");
@@ -240,6 +243,23 @@ export function computeGame(input: GameInput): GameState {
   };
   for (const ws of weeks) questXp += questsFor(ws).filter((q) => q.done).length * XP.questComplete;
   const quests = questsFor(weekStart(today));
+
+  // The chest: all three quests of a week done earns a shield, on the day the last one closed.
+  const chestDays = new Set<string>();
+  for (const ws of weeks) {
+    if (!questsFor(ws).every((q) => q.done)) continue;
+    const end = addDays(ws, 6);
+    const inWeek = (xs: Iterable<string>) => [...xs].filter((d) => d >= ws && d <= end).sort();
+    const closed = [
+      inWeek(metDaysByWeek.get(ws) ?? [])[questTarget - 1],
+      inWeek(activeDays)[4],
+      inWeek(checkinDays)[0],
+    ].sort();
+    chestDays.add(closed[closed.length - 1]);
+  }
+
+  // Streak over days with any habit logged.
+  const s = streakOf(activeDays, today, chestDays);
 
   const habitXp = [...attrXp.values()].reduce((a, b) => a + b, 0);
   const xp = habitXp + questXp;

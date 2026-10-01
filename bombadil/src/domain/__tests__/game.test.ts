@@ -74,6 +74,19 @@ describe("computeGame", () => {
     expect(computeGame(input({ logs: days("2026-09-10", 21) })).streak.shields).toBe(2);
   });
 
+  it("the weekly chest (all three quests done) earns a shield", () => {
+    const logs = [
+      ...["2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25"].map((d) => log("walk", d)),
+      log("squats", "2026-09-22"),
+      log("squats", "2026-09-24"),
+      ...["2026-09-27", "2026-09-28", "2026-09-29", "2026-09-30"].map((d) => log("walk", d)),
+    ];
+    // Without the check-in the week's chest stays closed and the missed Saturday breaks the run.
+    expect(computeGame(input({ logs })).streak).toMatchObject({ current: 4, protectedDays: [] });
+    // With it, the chest opens on Friday and its shield covers Saturday.
+    expect(computeGame(input({ logs, checkinDays: ["2026-09-25"] })).streak).toMatchObject({ current: 9, protectedDays: ["2026-09-26"] });
+  });
+
   it("knowing yourself: exams, check-ins, measurements and a device feed Sabiduría", () => {
     const g = computeGame(input({ examDays: ["2026-09-01", "2026-09-01"], checkinDays: [TODAY], measurementDays: ["2026-09-02", TODAY], deviceConnected: true }));
     expect(g.attributes.find((a) => a.key === "sabiduria")!.xp).toBe(XP.exam + XP.checkin + 2 * XP.measurementDay + XP.deviceConnected);

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { PILLARS, todayInColombia } from "@/domain/habits";
 import { LifestyleSchema } from "@/domain/lifestyle";
-import { requireParticipant } from "@/lib/auth";
+import { prefsOf, requireParticipant } from "@/lib/auth";
 import { createHabitPlan } from "@/lib/habit-plan";
 import { createClient } from "@/lib/supabase/server";
 
@@ -63,7 +63,11 @@ export async function logHabit(form: FormData): Promise<void> {
   const day = f.day && f.day <= today && f.day >= new Date(Date.parse(today) - 86_400_000).toISOString().slice(0, 10) ? f.day : today;
   const supabase = await createClient();
   if (f.mode === "undo") {
-    await supabase.from("habit_logs").delete().eq("habit_id", f.habit_id).eq("day", day).eq("participant_id", v.participant.id);
+    const { data: removed } = await supabase.from("habit_logs").delete().eq("habit_id", f.habit_id).eq("day", day).eq("participant_id", v.participant.id).select("source");
+    // A device logged it and the person says no: devices must not log that day again.
+    if (removed?.some((r) => r.source && r.source !== "manual")) {
+      await supabase.from("habit_log_dismissals").upsert({ habit_id: f.habit_id, participant_id: v.participant.id, day }, { onConflict: "habit_id,day", ignoreDuplicates: true });
+    }
   } else {
     await supabase
       .from("habit_logs")
@@ -71,7 +75,7 @@ export async function logHabit(form: FormData): Promise<void> {
   }
   revalidatePath("/app", "layout");
   // The last habit of the day earns the celebration screen (immediate reward).
-  if (f.mode !== "undo" && day === today) {
+  if (f.mode !== "undo" && day === today && !prefsOf(v.participant).sober) {
     const [active, logged] = await Promise.all([
       supabase.from("habits").select("id").eq("participant_id", v.participant.id).eq("status", "active"),
       supabase.from("habit_logs").select("habit_id").eq("participant_id", v.participant.id).eq("day", today),

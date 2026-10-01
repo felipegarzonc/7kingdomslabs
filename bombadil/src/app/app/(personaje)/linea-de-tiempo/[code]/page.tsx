@@ -30,8 +30,8 @@ export default async function MarkerPage({ params }: { params: Promise<{ code: s
       <PageHeader
         title={b.name}
         subtitle={
-          <Link href="/app/linea-de-tiempo" className="text-accent">
-            ← Línea de tiempo
+          <Link href="/app/examenes#resultados" className="text-accent">
+            ← Tus resultados
           </Link>
         }
       />

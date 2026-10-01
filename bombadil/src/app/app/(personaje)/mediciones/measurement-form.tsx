@@ -15,6 +15,12 @@ const TYPES = [
   { value: "sleep_hours", label: "Horas de sueño (noche)", unit: "h" },
   { value: "exercise_minutes", label: "Minutos de ejercicio (día)", unit: "min" },
   {
+    value: "protein_g",
+    label: "Proteína del día",
+    unit: "g",
+    hint: "Suma aproximada: un huevo ≈ 6 g, una taza de fríjol ≈ 15 g, una porción de pollo o carne del tamaño de tu mano ≈ 25 g.",
+  },
+  {
     value: "grip_strength",
     label: "Fuerza de agarre",
     unit: "kg",

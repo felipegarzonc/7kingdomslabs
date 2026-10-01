@@ -15,6 +15,8 @@ export interface HabitRow {
   status: "suggested" | "active" | "paused" | "archived";
   source: "plan" | "user";
   started_on: string | null;
+  /** "HH:MM:SS" Colombia time; null = default from the anchor. */
+  reminder_time: string | null;
   created_at: string;
 }
 

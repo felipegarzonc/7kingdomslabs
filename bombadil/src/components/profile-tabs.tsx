@@ -7,7 +7,7 @@ import { cx } from "./ui";
 /** Personaje hub, in priority order: who you are, your health, your devices, your data. */
 export const PROFILE_TABS: Array<{ href: string; label: string; icon: IconName; match: string[] }> = [
   { href: "/app/progreso", label: "Personaje", icon: "user", match: ["/app/progreso"] },
-  { href: "/app/examenes", label: "Salud", icon: "flask", match: ["/app/examenes", "/app/informes", "/app/metas", "/app/mediciones", "/app/linea-de-tiempo"] },
+  { href: "/app/examenes", label: "Salud", icon: "flask", match: ["/app/examenes", "/app/informes", "/app/metas", "/app/mediciones", "/app/linea-de-tiempo", "/app/resumen"] },
   { href: "/app/conexiones", label: "Dispositivos", icon: "watch", match: ["/app/conexiones"] },
   { href: "/app/datos", label: "Mis datos", icon: "folder", match: ["/app/datos"] },
 ];
@@ -18,7 +18,7 @@ const HEALTH_TABS = [
   { href: "/app/informes", label: "Informe" },
   { href: "/app/metas", label: "Metas" },
   { href: "/app/mediciones", label: "Mediciones" },
-  { href: "/app/linea-de-tiempo", label: "Línea de tiempo" },
+  { href: "/app/resumen", label: "Para tu médico" },
 ];
 
 export const PROFILE_PREFIXES = PROFILE_TABS.flatMap((t) => t.match);
@@ -28,7 +28,7 @@ export function ProfileTabs() {
   const isOn = (prefixes: string[]) => prefixes.some((p) => path === p || path.startsWith(p + "/"));
   const inHealth = isOn(PROFILE_TABS[1].match);
   return (
-    <div className="mb-6 flex flex-col gap-3">
+    <div className="mb-6 flex flex-col gap-3 print:hidden">
       <nav aria-label="Personaje" className="overflow-x-auto [scrollbar-width:none]">
         <ul className="flex gap-2 border-b-2 border-border">
           {PROFILE_TABS.map((t) => {
@@ -55,7 +55,8 @@ export function ProfileTabs() {
         <nav aria-label="Salud" className="overflow-x-auto [scrollbar-width:none]">
           <ul className="flex gap-2">
             {HEALTH_TABS.map((t) => {
-              const on = path === t.href || path.startsWith(t.href + "/");
+              // Marker details (/app/linea-de-tiempo/<code>) belong to Exámenes.
+              const on = path === t.href || path.startsWith(t.href + "/") || (t.href === "/app/examenes" && path.startsWith("/app/linea-de-tiempo"));
               return (
                 <li key={t.href}>
                   <Link

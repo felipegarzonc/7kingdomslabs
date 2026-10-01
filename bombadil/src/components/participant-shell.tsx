@@ -8,10 +8,10 @@ import { SideNav, type SideLink } from "./side-nav";
  * Participant app frame, after Duolingo on the web: menu on the left, the
  * page in the middle and the player's stats always in view on the right.
  */
-export function ParticipantShell({ children, links, game }: { children: React.ReactNode; links: SideLink[]; game: GameState }) {
+export function ParticipantShell({ children, links, game, sober = false }: { children: React.ReactNode; links: SideLink[]; game: GameState; sober?: boolean }) {
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[232px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_360px]">
-      <aside className="sticky top-0 z-20 flex flex-col gap-2 border-b-2 border-border bg-surface px-2 py-2 md:h-dvh md:border-r-2 md:border-b-0 md:px-4 md:py-6">
+    <div className="min-h-dvh md:grid md:grid-cols-[232px_minmax(0,1fr)] xl:grid-cols-[248px_minmax(0,1fr)_360px] print:block">
+      <aside className="sticky top-0 z-20 flex print:hidden flex-col gap-2 border-b-2 border-border bg-surface px-2 py-2 md:h-dvh md:border-r-2 md:border-b-0 md:px-4 md:py-6">
         <div className="flex items-center justify-between gap-2 md:mb-4 md:px-2">
           <Link href="/app" className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -35,12 +35,12 @@ export function ParticipantShell({ children, links, game }: { children: React.Re
           </form>
         </div>
       </aside>
-      <main className="mx-auto w-full max-w-3xl min-w-0 px-4 py-6 md:px-8 md:py-8">
-        <GameCelebration xp={game.xp} level={game.level} title={game.title} achievements={game.achievements.filter((a) => a.unlocked).map((a) => a.title)} />
+      <main className="mx-auto w-full max-w-3xl min-w-0 px-4 py-6 md:px-8 md:py-8 print:max-w-none print:p-0">
+        {sober ? null : <GameCelebration xp={game.xp} level={game.level} title={game.title} achievements={game.achievements.filter((a) => a.unlocked).map((a) => a.title)} />}
         {children}
       </main>
-      <aside className="px-4 pb-10 md:col-start-2 xl:col-start-auto xl:sticky xl:top-0 xl:h-dvh xl:overflow-y-auto xl:py-8 xl:pr-8 xl:pl-2" aria-label="Tu progreso">
-        <GameRail game={game} />
+      <aside className="px-4 pb-10 print:hidden md:col-start-2 xl:col-start-auto xl:sticky xl:top-0 xl:h-dvh xl:overflow-y-auto xl:py-8 xl:pr-8 xl:pl-2" aria-label="Tu progreso">
+        <GameRail game={game} sober={sober} />
       </aside>
     </div>
   );

@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AchievementGrid, AttributeList, Bar, Heatmap } from "@/components/game";
 import { HatAvatar } from "@/components/icons";
+import { Le8Card } from "@/components/le8";
 import { Card } from "@/components/ui";
 import { SHIELD_EVERY, SHIELD_MAX, XP } from "@/domain/game";
 import { buildSnapshot } from "@/domain/snapshot";
-import { requireParticipant } from "@/lib/auth";
+import { prefsOf, requireParticipant } from "@/lib/auth";
 import { getGame } from "@/lib/data/game";
+import { participantLe8 } from "@/lib/data/le8";
 import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,8 +19,11 @@ const fmt = (n: number) => n.toLocaleString("es-CO");
 export default async function CharacterPage() {
   const { participant: p } = await requireParticipant();
   const supabase = await createClient();
-  const snapshot = buildSnapshot(toSnapshotInput(p, await loadParticipantData(supabase, p.id)));
+  const data = await loadParticipantData(supabase, p.id);
+  const snapshot = buildSnapshot(toSnapshotInput(p, data));
+  const heart = participantLe8(p, data, snapshot);
   const game = await getGame(p.id, snapshot.goals.filter((g) => g.status === "achieved").length);
+  const { sober } = prefsOf(p);
   const unlocked = game.achievements.filter((a) => a.unlocked);
   const activeDays = game.heatmap.filter((c) => c.value > 0).length;
 
@@ -27,22 +32,30 @@ export default async function CharacterPage() {
       <section className="flex flex-wrap items-center gap-5">
         <HatAvatar size={104} level={game.level} />
         <div className="min-w-0 flex-1">
-          <h1 className="font-serif text-4xl leading-tight font-bold">{game.title}</h1>
+          <h1 className="font-serif text-4xl leading-tight font-bold">{sober ? (p.display_name ?? "Tu progreso") : game.title}</h1>
           <p className="mt-1 font-semibold text-muted">
-            {p.display_name ? `${p.display_name} · ` : ""}
-            {fmt(game.xp)} XP · mejor racha {game.streak.best} {game.streak.best === 1 ? "día" : "días"} · {activeDays} días activos en 12 semanas
+            {p.display_name && !sober ? `${p.display_name} · ` : ""}
+            {sober ? "" : `${fmt(game.xp)} XP · `}mejor racha {game.streak.best} {game.streak.best === 1 ? "día" : "días"} · {activeDays} días activos en 12 semanas
           </p>
           {p.personal_goal ? <p className="mt-1 font-bold text-accent">Rumbo a: «{p.personal_goal}»</p> : null}
-          <Bar value={game.levelProgress} label="Experiencia hacia el siguiente nivel" className="mt-3 h-3.5 max-w-sm" />
-          <p className="mt-1 text-sm font-bold text-muted">
-            {fmt(game.xpIntoLevel)} / {fmt(game.xpForNext)} XP para el nivel {game.level + 1}
-          </p>
+          {sober ? null : (
+            <>
+              <Bar value={game.levelProgress} label="Experiencia hacia el siguiente nivel" className="mt-3 h-3.5 max-w-sm" />
+              <p className="mt-1 text-sm font-bold text-muted">
+                {fmt(game.xpIntoLevel)} / {fmt(game.xpForNext)} XP para el nivel {game.level + 1}
+              </p>
+            </>
+          )}
         </div>
       </section>
 
-      <Card title="Atributos" action={<span className="text-sm font-bold text-muted">Suben con los hábitos de cada pilar</span>}>
-        <AttributeList attributes={game.attributes} />
-      </Card>
+      {heart ? <Le8Card result={heart} /> : null}
+
+      {sober ? null : (
+        <Card title="Atributos" action={<span className="text-sm font-bold text-muted">Suben con los hábitos de cada pilar</span>}>
+          <AttributeList attributes={game.attributes} />
+        </Card>
+      )}
 
       <Card title="Constancia" action={<span className="text-sm font-bold text-muted">Últimas 12 semanas</span>}>
         <dl className="mb-4 grid grid-cols-3 gap-3 text-center">
@@ -68,7 +81,7 @@ export default async function CharacterPage() {
         <AchievementGrid achievements={game.achievements} />
       </Card>
 
-      <details className="rounded-3xl border-2 border-border bg-surface p-5 text-sm">
+      <details hidden={sober} className="rounded-3xl border-2 border-border bg-surface p-5 text-sm">
         <summary className="cursor-pointer font-black">¿Cómo se gana experiencia?</summary>
         <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-muted">
           <li>

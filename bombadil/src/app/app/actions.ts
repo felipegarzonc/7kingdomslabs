@@ -14,6 +14,7 @@ import { raiseAlerts } from "@/lib/alerts";
 import { requireParticipant } from "@/lib/auth";
 import { runCheckinReply, runExtraction } from "@/lib/jobs";
 import { deleteParticipantCompletely } from "@/lib/account";
+import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionState = {
@@ -40,7 +41,7 @@ function localToIso(local: string | undefined): string {
 // ─── Measurements ───────────────────────────────────────────────────────────
 
 const MeasurementForm = z.object({
-  type: z.enum(["weight", "waist", "bp", "resting_hr", "sleep_hours", "exercise_minutes", "grip_strength", "vo2max"]),
+  type: z.enum(["weight", "waist", "bp", "resting_hr", "sleep_hours", "exercise_minutes", "grip_strength", "vo2max", "protein_g"]),
   value: optionalNumber,
   systolic: optionalNumber,
   diastolic: optionalNumber,
@@ -263,6 +264,57 @@ export async function updateProfile(_prev: ActionState, form: FormData): Promise
   if (error) return { error: "No se pudo actualizar." };
   revalidatePath("/app", "layout");
   return { ok: true, message: "Datos actualizados." };
+}
+
+export async function updatePreferences(_prev: ActionState, form: FormData): Promise<ActionState> {
+  await requireParticipant();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_my_preferences", { p_sober: form.get("sober") === "on", p_reminders_email: form.get("reminders_email") === "on" });
+  if (error) return { error: "No se pudo guardar." };
+  revalidatePath("/app", "layout");
+  return { ok: true, message: "Preferencias guardadas." };
+}
+
+/** Turns the buddy link on (new token) or off. */
+export async function setShare(form: FormData): Promise<void> {
+  await requireParticipant();
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_my_share", { p_enabled: form.get("enabled") === "true" });
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/datos");
+}
+
+// ─── Push reminders ─────────────────────────────────────────────────────────
+
+const PushSubscriptionSchema = z.object({
+  endpoint: z.url().max(1000),
+  keys: z.object({ p256dh: z.string().min(10).max(200), auth: z.string().min(8).max(100) }),
+});
+
+/** Saves this browser's push subscription (written with the service role: the table has no participant write policy). */
+export async function savePushSubscription(sub: unknown): Promise<{ ok: boolean }> {
+  const v = await requireParticipant();
+  const parsed = PushSubscriptionSchema.safeParse(sub);
+  if (!parsed.success || !parsed.data.endpoint.startsWith("https://")) return { ok: false };
+  const { error } = await createServiceClient()
+    .from("push_subscriptions")
+    .upsert({ participant_id: v.participant.id, endpoint: parsed.data.endpoint, p256dh: parsed.data.keys.p256dh, auth: parsed.data.keys.auth }, { onConflict: "endpoint" });
+  return { ok: !error };
+}
+
+export async function removePushSubscription(endpoint: string): Promise<void> {
+  const v = await requireParticipant();
+  await createServiceClient().from("push_subscriptions").delete().eq("participant_id", v.participant.id).eq("endpoint", String(endpoint));
+}
+
+/** Per-habit reminder time ("" = default from the anchor). */
+export async function setReminderTime(form: FormData): Promise<void> {
+  await requireParticipant();
+  const t = String(form.get("reminder_time") ?? "");
+  if (t && !/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) return;
+  const supabase = await createClient();
+  await supabase.from("habits").update({ reminder_time: t || null }).eq("id", String(form.get("habit_id")));
+  revalidatePath("/app/camino");
 }
 
 export async function submitFeedback(_prev: ActionState, form: FormData): Promise<ActionState> {

@@ -17,10 +17,25 @@ export interface ParticipantRow {
   /** Answers to the lifestyle questionnaire (see src/domain/lifestyle.ts). */
   lifestyle: unknown;
   priorities: string[];
+  /** {sober, reminders_email}; see prefsOf. */
+  preferences: Record<string, unknown> | null;
+  /** Token of the read-only buddy page (/compartir/<token>); null = not shared. */
+  share_token: string | null;
   pilot_start: string | null;
   status: "invited" | "active" | "withdrawn" | "completed";
   withdrawn_at: string | null;
   created_at: string;
+}
+
+export interface Preferences {
+  /** Hide XP, levels and celebrations: just habits and streaks. */
+  sober: boolean;
+  reminders_email: boolean;
+}
+
+export function prefsOf(p: Pick<ParticipantRow, "preferences">): Preferences {
+  const x = p.preferences ?? {};
+  return { sober: x.sober === true, reminders_email: x.reminders_email === true };
 }
 
 export interface Viewer {

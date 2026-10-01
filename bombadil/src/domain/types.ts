@@ -31,7 +31,11 @@ export type MeasurementType =
   | "grip_strength"
   | "vo2max"
   | "alcohol_drinks"
-  | "steps";
+  | "steps"
+  | "hrv_ms"
+  | "sleep_deep_hours"
+  | "sleep_rem_hours"
+  | "protein_g";
 
 export type SmokingStatus = "never" | "former" | "current";
 

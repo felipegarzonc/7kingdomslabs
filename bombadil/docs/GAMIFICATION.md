@@ -39,5 +39,6 @@ historial.
   dependen también de genética y medicación, y premiarlos invita a sesgar los datos.
 - **Más es mejor**: cada pilar da como máximo 20 XP por día, para no incentivar sobreentrenar ni registrar de más.
 - **Tablas de posiciones**: comparar salud con otros desmotiva a quien más lo necesita.
-- **Recompensas de pago o aleatorias** (cofres, monedas): el efecto de sobrejustificación puede desplazar la
+- **Recompensas de pago o aleatorias** (cajas sorpresa, monedas). El “cofre” de las misiones es fijo y útil:
+  cumplir las tres misiones de la semana da un escudo para la racha, el mismo día en que se cierra la última. El efecto de sobrejustificación puede desplazar la
   motivación intrínseca (Deci, Koestner & Ryan, 1999).

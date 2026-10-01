@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { fmtDate } from "@/components/format";
+import { MarkerTimeline } from "@/components/marker-timeline";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { buildSnapshot } from "@/domain/snapshot";
 import { requireParticipant } from "@/lib/auth";
+import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { NO_LAB_RESULTS } from "@/lib/jobs";
 import { createClient } from "@/lib/supabase/server";
 import { DOC_STATUS } from "@/components/doc-status";
@@ -13,16 +16,18 @@ import { UploadForm } from "./upload-form";
 export const metadata: Metadata = { title: "Exámenes" };
 export const maxDuration = 300;
 
-
-
 export default async function LabsPage() {
   const { participant: p } = await requireParticipant();
   const supabase = await createClient();
-  const { data: docs } = await supabase
-    .from("lab_documents")
-    .select("id, original_filename, lab_name, sampled_on, status, created_at, extraction_error, kind, imaging")
-    .eq("participant_id", p.id)
-    .order("created_at", { ascending: false });
+  const [{ data: docs }, data] = await Promise.all([
+    supabase
+      .from("lab_documents")
+      .select("id, original_filename, lab_name, sampled_on, status, created_at, extraction_error, kind, imaging")
+      .eq("participant_id", p.id)
+      .order("created_at", { ascending: false }),
+    loadParticipantData(supabase, p.id),
+  ]);
+  const snapshot = buildSnapshot(toSnapshotInput(p, data));
 
   return (
     <>
@@ -71,6 +76,15 @@ export default async function LabsPage() {
           </p>
         </Card>
       </div>
+      {snapshot.markers.length ? (
+        <section id="resultados" aria-labelledby="resultados-title" className="mt-8 scroll-mt-6">
+          <h2 id="resultados-title" className="mb-1 font-serif text-2xl font-bold">
+            Tus resultados en el tiempo
+          </h2>
+          <p className="mb-4 text-sm text-muted">De todos los laboratorios y años. Toca un marcador para ver su historia.</p>
+          <MarkerTimeline snapshot={snapshot} />
+        </section>
+      ) : null}
     </>
   );
 }

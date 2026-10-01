@@ -13,7 +13,7 @@ const ADHERENCE = [
   { value: "no", label: "No" },
 ];
 
-export function CheckinForm({ priorities, week }: { priorities: string[]; week: number }) {
+export function CheckinForm({ priorities, week, fromDevices = {} }: { priorities: string[]; week: number; fromDevices?: Record<string, string> }) {
   const [state, action] = useActionState<ActionState, FormData>(submitCheckin, null);
   const [startedAt] = useState(() => Date.now());
 
@@ -53,6 +53,9 @@ export function CheckinForm({ priorities, week }: { priorities: string[]; week: 
       <fieldset>
         <legend className="mb-1 font-semibold">Mediciones de la semana</legend>
         <p className="mb-3 text-xs text-muted">Opcionales. Solo lo que hayas medido.</p>
+        {Object.keys(fromDevices).length ? (
+          <p className="mb-3 rounded-xl bg-accent-soft p-3 text-sm">Esto ya lo tenemos de tu reloj: {Object.values(fromDevices).join(", ")}. No hace falta escribirlo.</p>
+        ) : null}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Field label="Peso (kg)" htmlFor="weight">
             <Input id="weight" name="weight" inputMode="decimal" />
@@ -60,21 +63,27 @@ export function CheckinForm({ priorities, week }: { priorities: string[]; week: 
           <Field label="Cintura (cm)" htmlFor="waist">
             <Input id="waist" name="waist" inputMode="decimal" />
           </Field>
-          <Field label="FC en reposo (lpm)" htmlFor="resting_hr">
-            <Input id="resting_hr" name="resting_hr" inputMode="numeric" />
-          </Field>
+          {fromDevices.resting_hr ? null : (
+            <Field label="FC en reposo (lpm)" htmlFor="resting_hr">
+              <Input id="resting_hr" name="resting_hr" inputMode="numeric" />
+            </Field>
+          )}
           <Field label="Presión sistólica" htmlFor="systolic">
             <Input id="systolic" name="systolic" inputMode="numeric" placeholder="120" />
           </Field>
           <Field label="Presión diastólica" htmlFor="diastolic">
             <Input id="diastolic" name="diastolic" inputMode="numeric" placeholder="80" />
           </Field>
-          <Field label="Sueño promedio (h)" htmlFor="sleep_hours">
-            <Input id="sleep_hours" name="sleep_hours" inputMode="decimal" />
-          </Field>
-          <Field label="Ejercicio total (min)" htmlFor="exercise_minutes">
-            <Input id="exercise_minutes" name="exercise_minutes" inputMode="numeric" />
-          </Field>
+          {fromDevices.sleep_hours ? null : (
+            <Field label="Sueño promedio (h)" htmlFor="sleep_hours">
+              <Input id="sleep_hours" name="sleep_hours" inputMode="decimal" />
+            </Field>
+          )}
+          {fromDevices.exercise_minutes ? null : (
+            <Field label="Ejercicio total (min)" htmlFor="exercise_minutes">
+              <Input id="exercise_minutes" name="exercise_minutes" inputMode="numeric" />
+            </Field>
+          )}
           <Field label="Tragos de alcohol" htmlFor="alcohol_drinks" hint="1 trago = 1 cerveza, 1 copa de vino o 1 shot. 0 si no tomaste.">
             <Input id="alcohol_drinks" name="alcohol_drinks" inputMode="numeric" />
           </Field>

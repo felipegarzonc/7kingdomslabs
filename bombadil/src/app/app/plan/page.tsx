@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { setHabitStatus } from "../habitos/actions";
 import { CustomHabitForm, RegeneratePlanForm } from "./forms";
 
-export const metadata: Metadata = { title: "Mi plan" };
+export const metadata: Metadata = { title: "Gestionar hábitos" };
 // Regenerating suggestions calls the LLM from this page's server action.
 export const maxDuration = 120;
 
@@ -52,8 +52,11 @@ export default async function PlanPage() {
 
   return (
     <>
+      <Link href="/app/camino" className="mb-2 inline-block text-sm font-black tracking-wide text-accent uppercase">
+        ← El camino
+      </Link>
       <PageHeader
-        title="Mi plan de hábitos"
+        title="Gestionar hábitos"
         subtitle={p.personal_goal ? `Tu meta: «${p.personal_goal}»` : "Hábitos pequeños, anclados a tu rutina, que suben de nivel cuando se vuelven fáciles."}
       />
       <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">

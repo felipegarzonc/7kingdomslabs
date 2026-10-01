@@ -40,7 +40,7 @@ export default async function QuestsPage() {
 
       <Card title="Esta semana">
         <QuestList quests={game.quests} />
-        <p className="mt-4 text-sm text-muted">Cada misión cumplida abre su cofre: +{game.quests[0]?.xp ?? 50} XP. Cada lunes es un nuevo comienzo.</p>
+        <p className="mt-4 text-sm text-muted">Cada misión cumplida abre su cofre: +{game.quests[0]?.xp ?? 50} XP. Si cumples las tres en la semana, ganas además un escudo para tu racha. Cada lunes es un nuevo comienzo.</p>
       </Card>
 
       <div className="flex flex-wrap items-baseline justify-between gap-2">

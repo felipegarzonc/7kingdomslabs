@@ -62,7 +62,7 @@ export function DayRing({ done, target, size = 104, onDark = false }: { done: nu
 }
 
 /** Streak · shields · XP, always visible in the right column. */
-export function StatCounters({ game }: { game: GameState }) {
+export function StatCounters({ game, sober = false }: { game: GameState; sober?: boolean }) {
   const s = game.streak;
   return (
     <div className="flex items-center justify-between gap-3 px-2 text-base font-black">
@@ -76,10 +76,12 @@ export function StatCounters({ game }: { game: GameState }) {
         <Shield size={24} />
         {s.shields} <span className="sr-only">escudos</span>
       </span>
-      <span className="flex items-center gap-1.5 text-[#8a6510] dark:text-gold" title="Experiencia total">
-        <Bolt size={24} />
-        {fmt(game.xp)} <span className="sr-only">XP</span>
-      </span>
+      {sober ? null : (
+        <span className="flex items-center gap-1.5 text-[#8a6510] dark:text-gold" title="Experiencia total">
+          <Bolt size={24} />
+          {fmt(game.xp)} <span className="sr-only">XP</span>
+        </span>
+      )}
     </div>
   );
 }
@@ -103,7 +105,7 @@ export function LevelCard({ game }: { game: GameState }) {
   );
 }
 
-export function QuestList({ quests, compact = false }: { quests: Quest[]; compact?: boolean }) {
+export function QuestList({ quests, compact = false, sober = false }: { quests: Quest[]; compact?: boolean; sober?: boolean }) {
   return (
     <ul className={cx("flex flex-col", compact ? "gap-3.5" : "gap-5")}>
       {quests.map((q) => (
@@ -123,6 +125,7 @@ export function QuestList({ quests, compact = false }: { quests: Quest[]; compac
             </div>
           </div>
           <span
+            hidden={sober}
             className={cx("flex h-10 w-11 shrink-0 items-center justify-center rounded-xl", q.done ? "bg-gold text-[#3b2a05]" : "bg-surface-2 text-muted")}
             title={q.done ? `Ganaste ${q.xp} XP` : `Recompensa: ${q.xp} XP`}
           >
@@ -136,11 +139,11 @@ export function QuestList({ quests, compact = false }: { quests: Quest[]; compac
 }
 
 /** Right column: counters, level and this week's quests. */
-export function GameRail({ game }: { game: GameState }) {
+export function GameRail({ game, sober = false }: { game: GameState; sober?: boolean }) {
   return (
     <div className="flex flex-col gap-4">
-      <StatCounters game={game} />
-      <LevelCard game={game} />
+      <StatCounters game={game} sober={sober} />
+      {sober ? null : <LevelCard game={game} />}
       <section className="rounded-3xl border-2 border-border bg-surface p-5" aria-label="Misiones de la semana">
         <div className="mb-4 flex items-baseline justify-between gap-2">
           <h2 className="text-base font-black">Misiones de la semana</h2>
@@ -148,7 +151,7 @@ export function GameRail({ game }: { game: GameState }) {
             Ver todas
           </Link>
         </div>
-        <QuestList quests={game.quests} compact />
+        <QuestList quests={game.quests} compact sober={sober} />
       </section>
     </div>
   );

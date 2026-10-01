@@ -224,6 +224,75 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   await expect(page.getByText(/Día completo: tu racha va en 1 día/)).toBeVisible();
 });
 
+test("engagement: undo a device log, heart score, reminders, sober mode, buddy link, doctor summary", async ({ page, browser }) => {
+  await login(page, ANA);
+  // Undoing what the watch logged sticks: re-sending the same data does not log it again.
+  await page.goto("/app");
+  await page.getByRole("listitem").filter({ hasText: "Registrado con Apple Salud" }).getByRole("button", { name: /deshacer/ }).click();
+  await expect(page.getByRole("img", { name: "Hoy: 3 de 4 hábitos" })).toBeVisible();
+  await page.goto("/app/conexiones");
+  const ingestPath = new URL(await page.getByLabel("Tu enlace personal").inputValue()).pathname;
+  const today = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  const again = await page.request.post(ingestPath, { data: { data: { metrics: [], workouts: [{ name: "Traditional Strength Training", start: `${today} 18:00:00 -0500` }] } } });
+  expect(await again.json()).toMatchObject({ ok: true, habits_logged: 0 });
+
+  // Life's Essential 8 on the character sheet, from the lifestyle answers and the watch.
+  await page.goto("/app/progreso");
+  await expect(page.getByRole("heading", { name: "Esencial 8 del corazón" })).toBeVisible();
+  await expect(page.getByText(/Calculado con \d de 8/)).toBeVisible();
+
+  // Reminder time per habit, on the path.
+  await page.goto("/app/camino");
+  await page.getByLabel("Recordarme a las").fill("07:15");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.reload();
+  await expect(page.getByLabel("Recordarme a las")).toHaveValue("07:15");
+  // The reminder cron refuses calls without its secret.
+  expect((await page.request.post("/api/cron/reminders")).status()).toBe(401);
+
+  // Sober mode hides XP and levels; turning it off brings them back.
+  await page.goto("/app/datos");
+  // Headless Chromium always reports notifications as blocked, so only the card is checked here.
+  await expect(page.getByRole("heading", { name: "Recordatorios" })).toBeVisible();
+  await page.getByLabel(/Modo sobrio/).check();
+  await page.getByRole("button", { name: "Guardar preferencias" }).click();
+  await expect(page.getByText("Preferencias guardadas.")).toBeVisible();
+  await page.goto("/app");
+  await expect(page.getByText(/^\+10 XP$/)).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Tu nivel" })).toHaveCount(0);
+  await snap(page, "02g-sober");
+  await page.goto("/app/datos");
+  await page.getByLabel(/Modo sobrio/).uncheck();
+  await page.getByRole("button", { name: "Guardar preferencias" }).click();
+  await expect(page.getByText("Preferencias guardadas.")).toBeVisible();
+
+  // Buddy link: consistency only, revocable.
+  await page.getByRole("button", { name: "Crear enlace para mi acompañante" }).click();
+  const shareUrl = await page.getByLabel("Enlace para tu acompañante").inputValue();
+  expect(shareUrl).toMatch(/\/compartir\/[0-9a-f]{32}$/);
+  const buddy = await browser.newPage();
+  await buddy.goto(new URL(shareUrl).pathname);
+  await expect(buddy.getByRole("heading", { name: "Ana" })).toBeVisible();
+  await expect(buddy.getByText("Acompañando a")).toBeVisible();
+  await expect(buddy.getByText(/mg\/dL|Glucosa|presión/i)).toHaveCount(0);
+  await snap(buddy, "02h-buddy");
+  await page.getByRole("button", { name: "Dejar de compartir" }).click();
+  await expect(page.getByRole("button", { name: "Crear enlace para mi acompañante" })).toBeVisible();
+  await buddy.reload();
+  await expect(buddy.getByText("Acompañando a")).toHaveCount(0);
+  await buddy.close();
+
+  // A one-page summary for the doctor.
+  await page.getByRole("navigation", { name: "Personaje" }).getByRole("link", { name: "Salud" }).click();
+  await page.getByRole("navigation", { name: "Salud" }).getByRole("link", { name: "Para tu médico" }).click();
+  await expect(page).toHaveURL(/\/app\/resumen$/);
+  await expect(page.getByText(/Resumen para consulta/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Hábitos en curso" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Imprimir o guardar PDF" })).toBeVisible();
+  await snap(page, "02i-doctor-summary");
+  await noHorizontalScroll(page);
+});
+
 test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {
   await login(page, ANA);
   await page.goto("/app/mediciones");
@@ -243,7 +312,9 @@ test("weekly check-in with an alarm symptom escalates; the form fits a phone", a
   const started = Date.now();
   await page.getByLabel("Peso (kg)").fill("88");
   await page.getByLabel("Cintura (cm)").fill("98");
-  await page.getByLabel("Sueño promedio (h)").fill("6.5");
+  // Sleep came from Apple Health this week, so it is not asked again.
+  await expect(page.getByText(/Esto ya lo tenemos de tu reloj: sueño 6,5 h/)).toBeVisible();
+  await expect(page.getByLabel("Sueño promedio (h)")).toHaveCount(0);
   await page.getByLabel("Dolor u opresión en el pecho").check();
   await page.getByLabel("¿Qué fue lo más difícil esta semana?").fill("Mucho trabajo, poco ejercicio.");
   await snap(page, "03-checkin-form");

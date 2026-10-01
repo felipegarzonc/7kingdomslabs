@@ -3,7 +3,7 @@ import { useActionState, useState } from "react";
 import { FormMessage } from "@/components/form-state";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, Input, Select, Textarea } from "@/components/ui";
-import { createGoal, type ActionState } from "../actions";
+import { createGoal, type ActionState } from "@/app/app/actions";
 
 export function GoalForm({ metrics }: { metrics: Array<{ value: string; label: string; unit: string; latest: number | null }> }) {
   const [state, action] = useActionState<ActionState, FormData>(createGoal, null);

@@ -8,6 +8,8 @@ export interface SideLink {
   href: string;
   label: string;
   icon: IconName;
+  /** Other paths that belong to this section (Personaje groups several pages). */
+  match?: string[];
 }
 
 /** Vertical menu on wide screens; an icon row on phones. */
@@ -18,7 +20,8 @@ export function SideNav({ links }: { links: SideLink[] }) {
     <nav aria-label="Principal" className="overflow-x-auto [scrollbar-width:none]">
       <ul className="flex gap-1 md:flex-col">
         {links.map((l) => {
-          const active = l.href === root ? path === l.href : path.startsWith(l.href);
+          const prefixes = [l.href, ...(l.match ?? [])];
+          const active = l.href === root ? path === l.href : prefixes.some((p) => path === p || path.startsWith(p + "/"));
           return (
             <li key={l.href}>
               <Link

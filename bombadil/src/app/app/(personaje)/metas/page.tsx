@@ -9,7 +9,7 @@ import type { MeasurementType } from "@/domain/types";
 import { requireParticipant } from "@/lib/auth";
 import { loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { createClient } from "@/lib/supabase/server";
-import { archiveGoal } from "../actions";
+import { archiveGoal } from "@/app/app/actions";
 import { GoalForm } from "./goal-form";
 
 export const metadata: Metadata = { title: "Metas" };

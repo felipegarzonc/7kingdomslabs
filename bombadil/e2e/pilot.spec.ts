@@ -190,6 +190,15 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   await expect(page.getByText("Conectado", { exact: true })).toBeVisible();
   await snap(page, "02d-progress");
   await noHorizontalScroll(page);
+  // Everything about you lives under Personaje: health record, devices and data are tabs.
+  await page.getByRole("navigation", { name: "Personaje" }).getByRole("link", { name: "Salud" }).click();
+  await expect(page).toHaveURL(/\/app\/examenes$/);
+  await page.getByRole("navigation", { name: "Salud" }).getByRole("link", { name: "Metas" }).click();
+  await expect(page).toHaveURL(/\/app\/metas$/);
+  await expect(page.getByRole("navigation", { name: "Principal" }).getByRole("link", { name: "Personaje" })).toHaveAttribute("aria-current", "page");
+  await page.getByRole("navigation", { name: "Personaje" }).getByRole("link", { name: "Dispositivos" }).click();
+  await expect(page).toHaveURL(/\/app\/conexiones$/);
+  await noHorizontalScroll(page);
 
   // The path of a habit and the quests page.
   await page.getByRole("link", { name: "Camino" }).first().click();

@@ -39,19 +39,6 @@ export default async function TimelinePage() {
       <PageHeader
         title="Exámenes en el tiempo"
         subtitle="Tus exámenes de todos los laboratorios y años, y tus mediciones."
-        action={
-          <div className="flex flex-wrap gap-2">
-            <LinkButton href="/app/progreso" variant="secondary">
-              ← Mi progreso
-            </LinkButton>
-            <LinkButton href="/app/mediciones" variant="secondary">
-              Mediciones
-            </LinkButton>
-            <LinkButton href="/app/informes" variant="secondary">
-              Informe
-            </LinkButton>
-          </div>
-        }
       />
       {!snapshot.markers.length ? (
         <EmptyState title="Aún no hay resultados">

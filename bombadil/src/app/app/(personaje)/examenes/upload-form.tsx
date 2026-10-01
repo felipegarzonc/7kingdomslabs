@@ -3,7 +3,7 @@ import { useActionState, useState } from "react";
 import { FormMessage } from "@/components/form-state";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, Input } from "@/components/ui";
-import { uploadLab, type ActionState } from "../actions";
+import { uploadLab, type ActionState } from "@/app/app/actions";
 
 export function UploadForm() {
   const [state, action] = useActionState<ActionState, FormData>(uploadLab, null);

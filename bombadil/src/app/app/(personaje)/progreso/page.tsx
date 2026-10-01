@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AchievementGrid, AttributeList, Bar, Heatmap } from "@/components/game";
 import { HatAvatar } from "@/components/icons";
-import { Card, LinkButton } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { SHIELD_EVERY, SHIELD_MAX, XP } from "@/domain/game";
 import { buildSnapshot } from "@/domain/snapshot";
 import { requireParticipant } from "@/lib/auth";
@@ -66,23 +66,6 @@ export default async function CharacterPage() {
 
       <Card title="Insignias" action={<span className="text-sm font-bold text-muted">{unlocked.length} de {game.achievements.length}</span>}>
         <AchievementGrid achievements={game.achievements} />
-      </Card>
-
-      <Card title="Tu salud en el tiempo">
-        <div className="flex flex-wrap gap-2">
-          <LinkButton href="/app/linea-de-tiempo" variant="secondary">
-            Exámenes en el tiempo
-          </LinkButton>
-          <LinkButton href="/app/mediciones" variant="secondary">
-            Mediciones
-          </LinkButton>
-          <LinkButton href="/app/informes" variant="secondary">
-            Informe
-          </LinkButton>
-          <LinkButton href="/app/metas" variant="secondary">
-            Mis metas
-          </LinkButton>
-        </div>
       </Card>
 
       <details className="rounded-3xl border-2 border-border bg-surface p-5 text-sm">

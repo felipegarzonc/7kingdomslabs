@@ -5,7 +5,7 @@ import { FormMessage } from "@/components/form-state";
 import { nowLocalBogota } from "@/components/format";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, Input, Select } from "@/components/ui";
-import { addMeasurement, type ActionState } from "../actions";
+import { addMeasurement, type ActionState } from "@/app/app/actions";
 
 const TYPES = [
   { value: "bp", label: "Presión arterial", unit: "mmHg" },

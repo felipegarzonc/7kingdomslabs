@@ -8,7 +8,7 @@ import { SOURCE_LABEL } from "@/domain/wearables";
 import { requireParticipant } from "@/lib/auth";
 import { loadParticipantData } from "@/lib/data/snapshot-input";
 import { createClient } from "@/lib/supabase/server";
-import { deleteMeasurement } from "../actions";
+import { deleteMeasurement } from "@/app/app/actions";
 import { MeasurementForm } from "./measurement-form";
 
 export const metadata: Metadata = { title: "Mediciones" };

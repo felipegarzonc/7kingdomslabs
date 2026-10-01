@@ -114,7 +114,7 @@ test("lifestyle questionnaire → personalised habit plan → logging today", as
   await expect(page.getByText("Tus hábitos · 0 de 3 hoy")).toBeVisible();
   await page.getByRole("button", { name: "Lo hice" }).first().click();
   await expect(page.getByText("Tus hábitos · 1 de 3 hoy")).toBeVisible();
-  await expect(page.getByText(/1 días/)).toBeVisible();
+  await expect(page.getByText("1/5 esta semana").first()).toBeVisible();
   await snap(page, "02b-today");
   await noHorizontalScroll(page);
   await page.goto("/app/plan");

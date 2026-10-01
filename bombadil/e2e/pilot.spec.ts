@@ -11,6 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { CONSENT_VERSION } from "../src/content/legal";
 import { makeLabPdf } from "./support/make-lab-pdf";
 
 test.describe.configure({ mode: "serial" });
@@ -94,7 +95,7 @@ test("participant consents, onboards and sees the home", async ({ page }) => {
   await expect(page.getByText("Semana 1 del piloto")).toBeVisible();
   await noHorizontalScroll(page);
   await page.goto("/app/datos");
-  await expect(page.getByText(/Versión 2026-09-v1 · aceptado/)).toBeVisible();
+  await expect(page.getByText(`Versión ${CONSENT_VERSION} · aceptado`, { exact: false })).toBeVisible();
 });
 
 test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {

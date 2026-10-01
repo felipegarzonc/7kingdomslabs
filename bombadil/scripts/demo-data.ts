@@ -5,6 +5,7 @@
  * Used by `npm run demo:seed` (local Supabase) and e2e/demo.spec.ts.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { CONSENT_VERSION } from "../src/content/legal";
 import { toCanonical } from "../src/domain/classify";
 
 const DAY = 864e5;
@@ -46,7 +47,7 @@ export async function seedDemo(db: SupabaseClient, opts: { participantEmail: str
     "participant",
   );
   const pid = p!.id as string;
-  check(await db.from("consents").insert({ participant_id: pid, version: "2026-09-v1", text_hash: "demo" }), "consent");
+  check(await db.from("consents").insert({ participant_id: pid, version: CONSENT_VERSION, text_hash: "demo" }), "consent");
 
   // ── Labs from three labs and years (one reported in mmol/L to show conversion) ──
   type Row = [code: string, unit: string, value: number, low: number | null, high: number | null];

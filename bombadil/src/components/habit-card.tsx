@@ -32,6 +32,7 @@ export function HabitCard({ habit, today, sober = false }: { habit: HabitWithLog
           <p className="text-sm font-extrabold text-muted">
             {attribute}
             {habit.anchor ? ` · ${habit.anchor}` : ""}
+            {habit.source === "own" ? <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-xs font-black text-accent-strong">Ya lo hacías</span> : null}
           </p>
           <p className="mt-0.5 text-lg leading-snug font-black">{habit.title}</p>
           {habit.tiny && !doneToday ? <p className="mt-0.5 text-sm text-muted">¿Día difícil? Basta con: {habit.tiny}</p> : null}

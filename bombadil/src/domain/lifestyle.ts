@@ -107,6 +107,8 @@ export const LifestyleSchema = z.object({
   focus: z.array(z.enum(PILLARS)).max(3),
   /** Injuries, schedules, preferences: "trabajo de noche", "me duele la rodilla". */
   constraints: z.string().max(500).optional(),
+  /** Set once the person has told us which habits they already have (see own-habits.ts). */
+  own_reviewed: z.boolean().optional(),
 });
 export type Lifestyle = z.infer<typeof LifestyleSchema>;
 

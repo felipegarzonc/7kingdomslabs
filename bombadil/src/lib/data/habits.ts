@@ -13,7 +13,11 @@ export interface HabitRow {
   target_per_week: number;
   level: number;
   status: "suggested" | "active" | "paused" | "archived";
-  source: "plan" | "user";
+  /** "own" = a habit the person already had when they joined. */
+  source: "plan" | "user" | "own";
+  /** For suggestions that level up an existing habit. */
+  replaces_habit_id: string | null;
+  declined_at: string | null;
   started_on: string | null;
   /** "HH:MM:SS" Colombia time; null = default from the anchor. */
   reminder_time: string | null;

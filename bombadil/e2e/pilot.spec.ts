@@ -108,7 +108,7 @@ test("participant consents, onboards and sees the home", async ({ page }) => {
   await onboard(page, ANA);
   await page.goto("/app");
   await expect(page.getByRole("heading", { name: "Hola, Ana" })).toBeVisible();
-  await expect(page.getByText("Construyamos tus hábitos de longevidad")).toBeVisible();
+  await expect(page.getByText("Empecemos por lo que ya haces")).toBeVisible();
   // The game frame is there from day one: level, streak and this week's quests.
   await expect(page.getByText("Aprendiz del bosque").first()).toBeVisible();
   await noHorizontalScroll(page);
@@ -116,20 +116,31 @@ test("participant consents, onboards and sees the home", async ({ page }) => {
   await expect(page.getByText(`Versión ${CONSENT_VERSION} · aceptado`, { exact: false })).toBeVisible();
 });
 
-test("lifestyle questionnaire → personalised habit plan → logging today", async ({ page }) => {
+test("own habits first → optional suggestions → logging today", async ({ page }) => {
   await login(page, ANA);
   await page.goto("/app/empezar");
+  // What Ana already does counts from day one.
+  await page.getByLabel("Camino o monto en bicicleta").check();
+  await page.getByLabel("¿Cuándo? (opcional)").first().fill("Después de almorzar");
+  await page.getByLabel("Como frutas y verduras todos los días").check();
   await page.getByLabel(/Qué quieres lograr/).fill("Llegar a los 80 con energía.");
   for (const option of ["Menos de 1 hora", "Ninguno", "6 a 7", "0 a 1", "Todos los días", "1 a 7", "Alto", "20 minutos"]) {
     await page.getByText(option, { exact: true }).first().click();
   }
-  await page.getByText("Fuerza", { exact: true }).click();
-  await page.getByText("Sueño", { exact: true }).click();
+  const focus = page.getByRole("group", { name: /Si hiciéramos una sugerencia/ });
+  await focus.getByText("Fuerza", { exact: true }).click();
+  await focus.getByText("Sueño", { exact: true }).click();
   await snap(page, "02a-lifestyle");
-  await page.getByRole("button", { name: "Crear mi plan de hábitos" }).click();
+  await page.getByRole("button", { name: "Guardar y ver sugerencias" }).click();
   await expect(page).toHaveURL(/\/app\?plan=nuevo$/);
-  await expect(page.getByText("Tu plan está listo")).toBeVisible();
-  await expect(page.getByText("Camina 10 minutos")).toBeVisible();
+  await expect(page.getByText("Sumamos lo que ya haces")).toBeVisible();
+  await expect(page.getByText("Caminar o montar en bicicleta").first()).toBeVisible();
+  await expect(page.getByText("Ya lo hacías").first()).toBeVisible();
+  // Nothing new starts on its own: suggestions wait for a yes.
+  await expect(page.getByRole("img", { name: "Hoy: 0 de 2 hábitos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sugerencias para ti" })).toBeVisible();
+  await expect(page.getByText("Mejora de «Caminar o montar en bicicleta»")).toBeVisible();
+  await page.getByRole("listitem").filter({ hasText: "10 sentadillas" }).getByRole("button", { name: "Probar", exact: true }).click();
   await expect(page.getByRole("img", { name: "Hoy: 0 de 3 hábitos" })).toBeVisible();
   await page.getByRole("button", { name: "Lo hice" }).first().click();
   await expect(page.getByRole("img", { name: "Hoy: 1 de 3 hábitos" })).toBeVisible();
@@ -141,10 +152,11 @@ test("lifestyle questionnaire → personalised habit plan → logging today", as
   await expect(page.getByText("Misiones de la semana")).toBeVisible();
   await snap(page, "02b-today");
   await noHorizontalScroll(page);
+  // "Ahora no" removes the suggestion; the plan will not insist.
   await page.goto("/app/plan");
-  await expect(page.getByText("Sugeridos para después")).toBeVisible();
-  await page.getByRole("button", { name: "Empezar este" }).click();
-  await expect(page.getByText(/Activos \(4\)/)).toBeVisible();
+  await page.getByRole("listitem").filter({ hasText: "Camina 30 minutos" }).getByRole("button", { name: "Ahora no" }).click();
+  await expect(page.getByText("Camina 30 minutos")).toHaveCount(0);
+  await expect(page.getByText(/Activos \(3\)/)).toBeVisible();
 });
 
 test("Apple Health link: data arrives on its own and logs the strength habit", async ({ page }) => {
@@ -183,7 +195,7 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   expect((await page.request.post("/api/ingest/not-a-real-token-123456789", { data: payload })).status()).toBe(404);
 
   await page.goto("/app");
-  await expect(page.getByRole("img", { name: "Hoy: 2 de 4 hábitos" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Hoy: 2 de 3 hábitos" })).toBeVisible();
   await expect(page.getByText("Registrado con Apple Salud")).toBeVisible();
   await expect(page.getByText("Tus datos de la semana")).toBeVisible();
   await expect(page.getByText("8.000").first()).toBeVisible();
@@ -222,8 +234,6 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   // Logging the last habits of the day opens the celebration.
   await page.goto("/app");
   await page.getByRole("button", { name: "Lo hice" }).first().click();
-  await expect(page.getByRole("img", { name: "Hoy: 3 de 4 hábitos" })).toBeVisible();
-  await page.getByRole("button", { name: "Lo hice" }).first().click();
   await expect(page).toHaveURL(/\/app\/celebracion$/);
   await expect(page.getByRole("heading", { name: "día de racha" })).toBeVisible();
   await snap(page, "02f-celebration");
@@ -237,7 +247,7 @@ test("engagement: undo a device log, heart score, reminders, sober mode, buddy l
   // Undoing what the watch logged sticks: re-sending the same data does not log it again.
   await page.goto("/app");
   await page.getByRole("listitem").filter({ hasText: "Registrado con Apple Salud" }).getByRole("button", { name: /deshacer/ }).click();
-  await expect(page.getByRole("img", { name: "Hoy: 3 de 4 hábitos" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Hoy: 2 de 3 hábitos" })).toBeVisible();
   await page.goto("/app/conexiones");
   const ingestPath = new URL(await page.getByLabel("Tu enlace personal").inputValue()).pathname;
   const today = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);

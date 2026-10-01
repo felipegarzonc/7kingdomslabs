@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SubmitButton } from "@/components/submit-button";
+import { SuggestionCard } from "@/components/suggestion-card";
 import { Badge, Card, PageHeader } from "@/components/ui";
 import { adherence, MAX_ACTIVE_HABITS, PILLAR_LABEL, todayInColombia } from "@/domain/habits";
 import { requireParticipant } from "@/lib/auth";
@@ -28,6 +29,7 @@ function HabitSummary({ habit, children }: { habit: HabitWithLogs; children?: Re
     <li className="flex flex-col gap-2 py-3">
       <div>
         <p className="text-xs text-muted">
+          {habit.source === "own" ? "Ya lo hacías · " : ""}
           {PILLAR_LABEL[habit.pillar]} · {habit.target_per_week} {habit.target_per_week === 1 ? "día" : "días"} por semana{habit.level > 1 ? ` · nivel ${habit.level}` : ""}
         </p>
         <p className="font-medium">{habit.title}</p>
@@ -79,28 +81,29 @@ export default async function PlanPage() {
               <p className="text-sm text-muted">
                 Aún no tienes hábitos activos.{" "}
                 <Link href="/app/empezar" className="text-accent underline">
-                  Arma tu plan en 2 minutos
+                  Cuéntanos qué ya haces
                 </Link>
                 .
               </p>
             )}
-            {active.length > MAX_ACTIVE_HABITS ? (
-              <p className="mt-3 text-xs text-warn">Tienes más de {MAX_ACTIVE_HABITS} hábitos activos. Es más fácil sostener pocos a la vez: pausa los que menos te importen hoy.</p>
+            {active.filter((h) => h.source !== "own").length > MAX_ACTIVE_HABITS ? (
+              <p className="mt-3 text-xs text-warn">
+                Estás construyendo más de {MAX_ACTIVE_HABITS} hábitos nuevos a la vez. Es más fácil sostener pocos: pausa los que menos te importen hoy.
+              </p>
             ) : null}
           </Card>
 
           {suggested.length ? (
-            <Card title="Sugeridos para después">
-              <p className="mb-1 text-sm text-muted">Agrégalos cuando tus hábitos activos se sientan automáticos.</p>
-              <ul className="divide-y divide-border">
+            <section aria-labelledby="sugerencias" className="flex flex-col gap-3">
+              <h2 id="sugerencias" className="text-lg font-black">
+                Sugerencias para ti
+              </h2>
+              <ul className="flex flex-col gap-3">
                 {suggested.map((h) => (
-                  <HabitSummary key={h.id} habit={h}>
-                    <StatusButton habit={h} status="active" label="Empezar este" variant="primary" />
-                    <StatusButton habit={h} status="archived" label="No me interesa" />
-                  </HabitSummary>
+                  <SuggestionCard key={h.id} habit={h} replaces={habits.find((x) => x.id === h.replaces_habit_id)} />
                 ))}
               </ul>
-            </Card>
+            </section>
           ) : null}
 
           {paused.length ? (
@@ -118,11 +121,11 @@ export default async function PlanPage() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <Card title="Nuevas sugerencias">
-            <p className="mb-3 text-sm text-muted">Usa tus respuestas, tus exámenes, tus mediciones y tus hábitos actuales.</p>
+          <Card title="Pedir sugerencias">
+            <p className="mb-3 text-sm text-muted">Miramos lo que ya haces, tus exámenes y tu reloj, y te proponemos como mucho dos pasos más. Tú decides si los pruebas.</p>
             <RegeneratePlanForm />
             <Link href="/app/empezar" className="mt-3 inline-block text-sm text-accent underline">
-              Actualizar mis respuestas sobre cómo vivo
+              Actualizar lo que ya hago y cómo vivo
             </Link>
           </Card>
           <Card title="Crear mi propio hábito">

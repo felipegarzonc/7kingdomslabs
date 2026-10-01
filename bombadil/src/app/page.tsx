@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const TITLE = "Entiende tus exámenes de sangre y mejora tu salud | Bombadil";
 const DESCRIPTION =
-  "Sube tus exámenes y entiende tu colesterol, glucosa, triglicéridos e hígado en palabras simples. Recibe 3 hábitos pequeños para mejorarlos y mide tu avance. Colombia.";
+  "Entiende tu colesterol, glucosa, triglicéridos e hígado en palabras simples. Partimos de tus hábitos, te sugerimos el siguiente paso y mides tu avance.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },

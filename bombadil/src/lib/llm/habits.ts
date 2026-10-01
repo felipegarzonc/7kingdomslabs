@@ -6,9 +6,13 @@ import { anthropic, assertUsable, llmConfig, loadPrompt, LlmError, toLlmError } 
 
 export const HabitPlanSchema = z.object({
   message: z.string(),
-  habits: z
+  /** At most two, never imposed: the person accepts or declines each one. */
+  suggestions: z
     .array(
       z.object({
+        kind: z.enum(["improve", "new"]),
+        /** `ref` of the current habit this one levels up (kind "improve"); null for new habits. */
+        improves: z.number().int().nullable(),
         pillar: z.enum(PILLARS),
         title: z.string(),
         tiny: z.string(),
@@ -18,8 +22,7 @@ export const HabitPlanSchema = z.object({
         target_per_week: z.number().int().min(1).max(7),
       }),
     )
-    .min(1)
-    .max(5),
+    .max(2),
 });
 export type HabitPlan = z.infer<typeof HabitPlanSchema>;
 
@@ -29,13 +32,14 @@ export interface HabitPlanInput {
   estilo_de_vida: Record<string, string>;
   enfoque: string[];
   hallazgos: unknown;
-  habitos_actuales: string[];
+  habitos_actuales: Array<{ ref: number; titulo: string; area: string; dias_por_semana: number; cuando: string | null; origen: "propio" | "bombadil" }>;
+  rechazadas_recientemente: string[];
   /** Averages from Strava / Apple Health over the last 14 days; null when nothing is connected. */
   datos_de_dispositivos: unknown;
 }
 
 export async function generateHabitPlan(input: HabitPlanInput): Promise<{ plan: HabitPlan; promptVersion: string; model: string }> {
-  const prompt = await loadPrompt("habit-plan", 2);
+  const prompt = await loadPrompt("habit-plan", 3);
   const model = llmConfig.model();
   try {
     const msg = await anthropic().beta.messages.parse({

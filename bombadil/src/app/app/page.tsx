@@ -6,9 +6,11 @@ import { fmtDate } from "@/components/format";
 import { DayRing } from "@/components/game";
 import { Icon } from "@/components/icons";
 import { HabitCard } from "@/components/habit-card";
+import { SuggestionCard } from "@/components/suggestion-card";
 import { Card, LinkButton, Notice } from "@/components/ui";
 import { addDays, todayInColombia } from "@/domain/habits";
 import { dayInColombia } from "@/domain/game";
+import { LifestyleSchema } from "@/domain/lifestyle";
 import { nextExamDue } from "@/domain/path";
 import { deviceSummary } from "@/domain/wearables";
 import { pilotWeek } from "@/domain/pilot";
@@ -73,6 +75,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const lastExam = docsRes.data?.[0]?.created_at ? dayInColombia(docsRes.data[0].created_at) : null;
   const exam = nextExamDue(lastExam, today);
   const { sober } = prefsOf(p);
+  const lifestyle = LifestyleSchema.partial().safeParse(p.lifestyle ?? {});
+  // People who joined before we asked about their own habits get one invitation to tell us.
+  const askOwn = active.length > 0 && !(lifestyle.success && lifestyle.data.own_reviewed);
   const firstName = p.display_name?.split(" ")[0];
   const headline = !active.length
     ? "Arma tu plan y empieza a sumar experiencia hoy."
@@ -117,7 +122,23 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       ) : null}
 
       <AlertNotices alerts={(alertsRes.data ?? []).map((a) => ({ level: a.level, message: a.message }))} />
-      {plan === "nuevo" ? <Notice tone="good" title="Tu plan está listo">Empieza hoy con estos hábitos. Son pequeños a propósito: lo importante es no fallar dos días seguidos.</Notice> : null}
+      {plan === "nuevo" ? (
+        <Notice tone="good" title="Sumamos lo que ya haces">
+          Tus hábitos cuentan desde hoy. {suggested.length ? "Abajo tienes nuestras sugerencias: tú decides si las pruebas." : "Por ahora no te sugerimos nada más: vas bien."}
+        </Notice>
+      ) : null}
+      {plan === "sin-sugerencias" ? (
+        <Notice tone="info" title="Sumamos lo que ya haces">
+          Tus hábitos cuentan desde hoy. No pudimos preparar sugerencias en este momento; puedes pedirlas en Gestionar hábitos.
+        </Notice>
+      ) : null}
+      {askOwn ? (
+        <Link href="/app/empezar" className="flex items-center gap-3 rounded-3xl border-2 border-dashed border-accent/50 bg-accent-soft/40 p-4 font-bold hover:bg-accent-soft">
+          <Icon name="list" size={26} className="text-accent" />
+          <span className="flex-1">¿Qué haces ya por tu salud? Cuéntanos y lo sumamos a tu racha desde hoy.</span>
+          <span className="text-sm font-black tracking-wide text-accent uppercase">Contar</span>
+        </Link>
+      ) : null}
 
       {active.length ? (
         <section className="flex flex-col gap-4">
@@ -138,23 +159,31 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
               <HabitCard key={h.id} habit={h} today={today} sober={sober} />
             ))}
           </ul>
-          {suggested.length ? (
-            <p className="text-sm text-muted">
-              Tienes {suggested.length} hábito(s) sugerido(s) para cuando estos sean fáciles.{" "}
-              <Link href="/app/plan" className="font-bold text-accent underline">
-                Verlos
-              </Link>
-            </p>
-          ) : null}
         </section>
-      ) : (
+      ) : null}
+
+      {suggested.length ? (
+        <section aria-labelledby="sugerencias" className="flex flex-col gap-3">
+          <div>
+            <h2 id="sugerencias" className="font-serif text-2xl font-bold">
+              Sugerencias para ti
+            </h2>
+            <p className="text-sm font-semibold text-muted">Opcionales. Pruébalas cuando quieras; si no es el momento, dinos «Ahora no».</p>
+          </div>
+          <ul className="flex flex-col gap-3">
+            {suggested.map((h) => (
+              <SuggestionCard key={h.id} habit={h} replaces={habits.find((x) => x.id === h.replaces_habit_id)} />
+            ))}
+          </ul>
+        </section>
+      ) : active.length ? null : (
         <Card className="border-accent/50 bg-accent-soft/40">
-          <p className="font-serif text-2xl font-bold">Construyamos tus hábitos de longevidad</p>
+          <p className="font-serif text-2xl font-bold">Empecemos por lo que ya haces</p>
           <p className="mt-1 text-muted">
-            Responde 8 preguntas de un toque sobre cómo vives hoy y te armamos 3 hábitos pequeños, anclados a tu rutina, que suben de nivel cuando se vuelven fáciles.
+            Cuéntanos qué haces hoy por tu salud y cómo vives. Lo que ya haces cuenta desde el primer día, y solo te sugerimos un paso más donde valga la pena.
           </p>
-          <LinkButton href={suggested.length ? "/app/plan" : "/app/empezar"} className="mt-4">
-            {suggested.length ? "Elegir mis hábitos" : "Armar mi plan (2 minutos)"}
+          <LinkButton href="/app/empezar" className="mt-4">
+            Empezar (2 minutos)
           </LinkButton>
         </Card>
       )}

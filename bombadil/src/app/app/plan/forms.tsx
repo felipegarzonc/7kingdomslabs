@@ -10,8 +10,8 @@ export function RegeneratePlanForm() {
   const [state, action] = useActionState<HabitState>(regeneratePlan, null);
   return (
     <form action={action} className="flex flex-col gap-2">
-      <SubmitButton variant="secondary" pendingText="Pensando tu plan… (unos 30 segundos)">
-        Sugerirme hábitos nuevos con mis datos actuales
+      <SubmitButton variant="secondary" pendingText="Mirando tus datos… (unos 30 segundos)">
+        Sugerirme un siguiente paso
       </SubmitButton>
       <FormMessage state={state} />
     </form>

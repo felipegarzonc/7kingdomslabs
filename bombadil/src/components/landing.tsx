@@ -43,8 +43,8 @@ const STEPS: Array<{ n: string; title: string; body: string; icon: IconName; til
   },
   {
     n: "2",
-    title: "Recibe tres hábitos a tu medida",
-    body: "Ocho preguntas sobre cómo vives y armamos tres hábitos pequeños, anclados a tu rutina, para los valores que más pesan.",
+    title: "Cuéntanos qué ya haces",
+    body: "Lo que ya haces por tu salud cuenta desde el primer día. Solo te sugerimos uno o dos pasos más, donde tus exámenes lo piden, y tú decides.",
     icon: "compass",
     tile: "bg-gold text-[#1b2433]",
   },
@@ -458,7 +458,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               Entiende tus exámenes y mejora tu salud, <span className="relative inline-block text-accent">un hábito a la vez.<Squiggle /></span>
             </h1>
             <p className="mt-6 max-w-xl text-lg font-semibold text-muted sm:text-xl">
-              Sube tus exámenes de sangre y entiende en minutos tu colesterol, glucosa, triglicéridos e hígado. Luego, tres hábitos pequeños para mejorarlos, y tu próximo examen te dirá si
+              Sube tus exámenes de sangre y entiende en minutos tu colesterol, glucosa, triglicéridos e hígado. Partimos de lo que ya haces, te sugerimos el siguiente paso, y tu próximo examen te dirá si
               funcionó.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -484,7 +484,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           <ul className="mx-auto grid max-w-6xl grid-cols-2 gap-x-4 gap-y-3 px-4 py-5 text-sm font-black sm:text-base md:grid-cols-4">
             {[
               { icon: "flask" as const, text: "Exámenes en palabras simples" },
-              { icon: "target" as const, text: "3 hábitos, no 30" },
+              { icon: "target" as const, text: "Parte de lo que ya haces" },
               { icon: "watch" as const, text: "Tu reloj registra por ti" },
               { icon: "heartPulse" as const, text: "Un resumen para tu médico" },
             ].map((p) => (
@@ -585,11 +585,11 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             <div className="max-w-2xl">
               <Eyebrow className="text-accent">Hábitos que se sostienen</Eyebrow>
               <h2 id="habitos" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
-                Pequeños, anclados a tu rutina y con un toque de juego.
+                Partimos de lo que ya haces y sumamos poco a poco.
               </h2>
               <p className="mt-3 text-base font-semibold text-muted sm:text-lg">
-                Usamos lo que la ciencia del comportamiento sabe sobre crear hábitos: empezar pequeño, pegarlo a algo que ya haces y premiar la constancia, no los resultados. Un mal día no
-                borra tu progreso.
+                Nada de cambiarte la vida de golpe. Lo que ya haces cuenta desde hoy, y cada sugerencia es pequeña, pegada a tu rutina y opcional: la pruebas o dices «ahora no». Premiamos
+                la constancia, no los resultados, y un mal día no borra tu progreso.
               </p>
             </div>
             <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-6">

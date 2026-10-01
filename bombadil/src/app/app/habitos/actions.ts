@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { PILLARS, todayInColombia } from "@/domain/habits";
 import { LifestyleSchema } from "@/domain/lifestyle";
+import { ownHabitRows, parseOwnHabits } from "@/domain/own-habits";
 import { prefsOf, requireParticipant } from "@/lib/auth";
-import { createHabitPlan } from "@/lib/habit-plan";
+import { createHabitPlan, saveOwnHabits } from "@/lib/habit-plan";
 import { createClient } from "@/lib/supabase/server";
 
 export type HabitState = { ok?: boolean; error?: string; message?: string } | null;
@@ -25,16 +26,21 @@ export async function saveLifestyleAndPlan(_prev: HabitState, form: FormData): P
     time: form.get("time"),
     focus: form.getAll("focus").map(String).slice(0, 3),
     constraints: String(form.get("constraints") ?? "").trim().slice(0, 500) || undefined,
+    own_reviewed: true,
   });
   if (!parsed.success) return { error: "Responde todas las preguntas (es un toque por pregunta)." };
+  const own = parseOwnHabits(form);
+  if (!own) return { error: "Revisa tus hábitos actuales: días entre 1 y 7, y si escribes uno propio, al menos 3 letras." };
   const goal = String(form.get("personal_goal") ?? "").trim().slice(0, 1000);
   const supabase = await createClient();
   const { error } = await supabase.rpc("update_my_lifestyle", { p_lifestyle: parsed.data, p_personal_goal: goal });
   if (error) return { error: "No se pudieron guardar tus respuestas." };
+  await saveOwnHabits(supabase, v.participant.id, ownHabitRows(own));
   const participant = { ...v.participant, lifestyle: parsed.data, personal_goal: goal || v.participant.personal_goal };
   const plan = await createHabitPlan(supabase, participant);
-  if ("error" in plan) return { error: `Guardamos tus respuestas, pero no se pudo crear el plan: ${plan.error}. Intenta de nuevo.` };
   revalidatePath("/app", "layout");
+  // Their own habits are saved either way; suggestions can be asked for again from Gestionar hábitos.
+  if ("error" in plan) redirect("/app?plan=sin-sugerencias");
   redirect("/app?plan=nuevo");
 }
 
@@ -103,6 +109,30 @@ export async function setHabitStatus(form: FormData): Promise<void> {
     .from("habits")
     .update({ status, started_on: status === "active" && !habit.started_on ? todayInColombia() : habit.started_on })
     .eq("id", id);
+  revalidatePath("/app", "layout");
+}
+
+/** "Probar": starts a suggestion; an improvement replaces the habit it levels up. */
+export async function acceptSuggestion(form: FormData): Promise<void> {
+  const { supabase, habit } = await ownHabit(String(form.get("habit_id")));
+  if (habit.status !== "suggested") return;
+  let level = 1;
+  if (habit.replaces_habit_id) {
+    const { data: old } = await supabase.from("habits").select("id, level").eq("id", habit.replaces_habit_id).maybeSingle();
+    if (old) {
+      level = Math.min(20, old.level + 1);
+      await supabase.from("habits").update({ status: "archived" }).eq("id", old.id);
+    }
+  }
+  await supabase.from("habits").update({ status: "active", started_on: todayInColombia(), level }).eq("id", habit.id);
+  revalidatePath("/app", "layout");
+}
+
+/** "Ahora no": archived with a date, so the plan does not propose it again soon. */
+export async function declineSuggestion(form: FormData): Promise<void> {
+  const { supabase, habit } = await ownHabit(String(form.get("habit_id")));
+  if (habit.status !== "suggested") return;
+  await supabase.from("habits").update({ status: "archived", declined_at: new Date().toISOString() }).eq("id", habit.id);
   revalidatePath("/app", "layout");
 }
 

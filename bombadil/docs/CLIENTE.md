@@ -36,7 +36,7 @@ Le falta convertir los datos en decisiones. Quiere sus dispositivos conectados, 
 
 - **Promesa (H1):** *Entiende tus exámenes y mejora tu salud, un hábito a la vez.*
 - **Prueba:** tu próximo examen te dice si funcionó.
-- **Mecanismo:** exámenes explicados → 3 hábitos pequeños anclados a la rutina → el reloj registra solo →
+- **Mecanismo:** exámenes explicados → partimos de los hábitos que ya tiene → como mucho 1 o 2 sugerencias opcionales (mejorar lo que ya hace antes que agregar) → el reloj registra solo →
   rachas y niveles para sostenerlo (con modo sobrio para quien no quiera juego).
 - **Confianza:** evidencia (Life's Essential 8 de la AHA), reglas clínicas fijas para las alertas,
   resumen para el médico, Ley 1581.

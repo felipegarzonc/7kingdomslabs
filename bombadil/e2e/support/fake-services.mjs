@@ -207,12 +207,10 @@ const IMAGING = {
   questions_for_doctor: ["¿Qué ejercicios me convienen mientras sana el tendón?", "¿Necesito control con otra resonancia?"],
 };
 const HABIT_PLAN = {
-  message: "Empezamos con tres hábitos pequeños anclados a tu rutina.",
-  habits: [
-    { pillar: "movimiento", title: "Camina 10 minutos", tiny: "Ponte los tenis y camina 2 minutos", anchor: "Después de almorzar", why: "Tu meta es llegar a los 80 con energía.", next_step: "Camina 20 minutos, 5 días", target_per_week: 5 },
-    { pillar: "sueno", title: "Pantallas apagadas a las 10 p. m.", tiny: "Deja el celular fuera del cuarto", anchor: "Después de cepillarte los dientes", why: "Duermes 6 a 7 horas.", next_step: "Acostarte a las 10:30 p. m.", target_per_week: 5 },
-    { pillar: "fuerza", title: "10 sentadillas", tiny: "3 sentadillas", anchor: "Después de servir el café", why: "No haces fuerza hoy.", next_step: "2 series de 10", target_per_week: 3 },
-    { pillar: "nutricion", title: "Una fruta en el desayuno", tiny: "Medio banano", anchor: "Al servir el desayuno", why: "Comes 0 a 1 porciones al día.", next_step: "Fruta y verdura en el almuerzo", target_per_week: 5 },
+  message: "Ya caminas y comes frutas: buena base. Te sugerimos subir un poco la caminata y sumar fuerza, que hoy no haces.",
+  suggestions: [
+    { kind: "improve", improves: 0, pillar: "movimiento", title: "Camina 30 minutos", tiny: "Camina 10 minutos", anchor: "Después de almorzar", why: "Ya caminas 5 días; 10 minutos más ayudan a tus triglicéridos.", next_step: "Camina 40 minutos, 5 días", target_per_week: 5 },
+    { kind: "new", improves: null, pillar: "fuerza", title: "10 sentadillas", tiny: "3 sentadillas", anchor: "Después de servir el café", why: "No haces fuerza hoy.", next_step: "2 series de 10", target_per_week: 3 },
   ],
 };
 const REPORT = {

@@ -19,6 +19,11 @@ async function runChecks(): Promise<Check[]> {
     { label: "NEXT_PUBLIC_SUPABASE_ANON_KEY", ok: has("NEXT_PUBLIC_SUPABASE_ANON_KEY"), fix: "La llave anon/public de Supabase (Project Settings → API)." },
     { label: "SUPABASE_SERVICE_ROLE_KEY", ok: has("SUPABASE_SERVICE_ROLE_KEY"), fix: "La llave service_role de Supabase (Project Settings → API). Solo en Vercel, nunca en el navegador." },
     { label: "ANTHROPIC_API_KEY", ok: has("ANTHROPIC_API_KEY"), fix: "Crea una llave en console.anthropic.com. Sin ella la app funciona, pero no lee PDFs ni redacta informes." },
+    {
+      label: "Strava (opcional)",
+      ok: has("STRAVA_CLIENT_ID") && has("STRAVA_CLIENT_SECRET"),
+      fix: "Registra la app en strava.com/settings/api (Authorization Callback Domain = el dominio del sitio) y pon STRAVA_CLIENT_ID y STRAVA_CLIENT_SECRET en Vercel.",
+    },
     { label: "NEXT_PUBLIC_SITE_URL", ok: has("NEXT_PUBLIC_SITE_URL"), fix: "La dirección pública de la app, p. ej. https://bombadil.vercel.app (sin / al final)." },
   ];
   let dbOk = false;

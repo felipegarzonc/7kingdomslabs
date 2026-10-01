@@ -128,6 +128,32 @@ export async function syncStrava(db: SupabaseClient, conn: Pick<DeviceConnection
   }
 }
 
+/**
+ * Registers Strava's push subscription (new/edited/deleted activities) if it is not
+ * there yet. Idempotent; runs after a connection so no manual setup is needed.
+ */
+export async function ensureStravaWebhook(): Promise<void> {
+  const cfg = env.strava();
+  if (!cfg) return;
+  const callbackUrl = `${env.siteUrl()}/api/strava/webhook`;
+  const base = `${API}/push_subscriptions`;
+  const auth = new URLSearchParams({ client_id: cfg.clientId, client_secret: cfg.clientSecret });
+  try {
+    const existing = (await (await fetch(`${base}?${auth}`)).json()) as Array<{ id: number; callback_url: string }>;
+    const subs = Array.isArray(existing) ? existing : [];
+    if (subs.some((s) => s.callback_url === callbackUrl)) return;
+    // Strava allows one subscription per app: replace one pointing elsewhere.
+    for (const s of subs) await fetch(`${base}/${s.id}?${auth}`, { method: "DELETE" });
+    const res = await fetch(base, {
+      method: "POST",
+      body: new URLSearchParams({ client_id: cfg.clientId, client_secret: cfg.clientSecret, callback_url: callbackUrl, verify_token: stravaVerifyToken() }),
+    });
+    if (!res.ok) console.error("strava webhook subscription failed", res.status, (await res.text()).slice(0, 200));
+  } catch (e) {
+    console.error("strava webhook subscription failed", e);
+  }
+}
+
 export async function disconnectStrava(db: SupabaseClient, connectionId: string) {
   try {
     const token = await accessToken(db, connectionId);

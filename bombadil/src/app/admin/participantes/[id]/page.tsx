@@ -4,6 +4,7 @@ import { AlertNotices } from "@/components/alert-list";
 import { DOC_STATUS } from "@/components/doc-status";
 import { fmtCop, fmtDate, fmtDateTime, fmtNum } from "@/components/format";
 import { GoalStatusBadge } from "@/components/goal-status";
+import { SMOKING_LABEL } from "@/components/smoking-select";
 import { FlagBadge, TrendBadge } from "@/components/marker-bits";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, buttonClass, Card, PageHeader } from "@/components/ui";
@@ -75,6 +76,7 @@ export default async function AdminParticipantPage({ params }: { params: Promise
         <div className="grid gap-4 md:grid-cols-2">
           <Card title="Objetivo y consentimiento">
             <p className="text-sm">{p.personal_goal ?? <span className="text-muted">Sin onboarding aún.</span>}</p>
+            {p.smoking_status ? <p className="mt-2 text-sm">Tabaco: {SMOKING_LABEL[p.smoking_status]}</p> : null}
             <p className="mt-2 text-xs text-muted">
               {consents.data?.length ? consents.data.map((c) => `Consentimiento ${c.version} · ${fmtDateTime(c.accepted_at)}`).join(" · ") : "Sin consentimiento registrado."}
             </p>

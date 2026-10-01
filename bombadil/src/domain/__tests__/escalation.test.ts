@@ -16,6 +16,7 @@ function inputFor(rule: EscalationRule, value: number): EscalationInput {
   const sex = rule.sex ?? "male";
   if (rule.subject.kind === "measurement") return { sex, measurements: [{ type: rule.subject.type as MeasurementType, value }] };
   if (rule.subject.kind === "biomarker") return { sex, biomarkers: [{ code: rule.subject.code, value }] };
+  if (rule.subject.kind === "derived") return { sex, age: rule.ageMin ?? rule.ageMax ?? 50, derived: [{ metric: rule.subject.metric, value }] };
   throw new Error("not numeric");
 }
 
@@ -51,7 +52,7 @@ describe("escalation ruleset", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  const numeric = DEFAULT_RULESET.rules.filter((r) => (r.subject.kind === "measurement" || r.subject.kind === "biomarker") && r.condition);
+  const numeric = DEFAULT_RULESET.rules.filter((r) => (r.subject.kind === "measurement" || r.subject.kind === "biomarker" || r.subject.kind === "derived") && r.condition);
   describe.each(numeric.map((r) => [r.id, r] as const))("threshold %s", (_id, rule) => {
     const { fire, quiet } = boundaryCases(rule);
     it.each(fire)("fires at %s", (v) => {

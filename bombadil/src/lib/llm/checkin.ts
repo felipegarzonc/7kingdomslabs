@@ -12,7 +12,7 @@ export interface CheckinReplyInput {
 }
 
 export async function generateCheckinReply(input: CheckinReplyInput): Promise<{ text: string; promptVersion: string; model: string }> {
-  const prompt = await loadPrompt("checkin-reply", 1);
+  const prompt = await loadPrompt("checkin-reply", 2);
   const model = llmConfig.model();
   try {
     const msg = await anthropic().beta.messages.create({

@@ -1,6 +1,7 @@
 "use client";
 import { useActionState } from "react";
 import { FormMessage, type FormState } from "@/components/form-state";
+import { SmokingSelect } from "@/components/smoking-select";
 import { SubmitButton } from "@/components/submit-button";
 import { Field, Input, Select, Textarea } from "@/components/ui";
 import { completeOnboarding } from "./actions";
@@ -21,7 +22,7 @@ export function OnboardingForm({ consent }: { consent: React.ReactNode }) {
       </section>
       <section className="flex flex-col gap-4">
         <h2 className="font-semibold">2. Datos básicos</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Fecha de nacimiento" htmlFor="birth_date">
             <Input id="birth_date" name="birth_date" type="date" required max={new Date().toISOString().slice(0, 10)} />
           </Field>
@@ -37,6 +38,7 @@ export function OnboardingForm({ consent }: { consent: React.ReactNode }) {
           <Field label="Estatura (cm)" htmlFor="height_cm">
             <Input id="height_cm" name="height_cm" type="number" inputMode="decimal" min={100} max={250} step="0.5" required />
           </Field>
+          <SmokingSelect />
         </div>
       </section>
       <section className="flex flex-col gap-4">

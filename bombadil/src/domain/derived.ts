@@ -30,6 +30,38 @@ export function tgHdlRatio(triglycerides: number, hdl: number): number {
   return round(triglycerides / hdl, 2);
 }
 
+// ─── FIB-4 (liver fibrosis risk) ─────────────────────────────────────────────
+
+export type Fib4Category = "low" | "indeterminate" | "high";
+
+/**
+ * FIB-4 = (age × AST) / (platelets [10⁹/L] × √ALT). Platelets in 10³/µL are
+ * numerically identical to 10⁹/L.
+ */
+export function fib4(age: number, ast: number, alt: number, platelets: number): number | null {
+  if (!(age > 0 && ast > 0 && alt > 0 && platelets > 0)) return null;
+  return round((age * ast) / (platelets * Math.sqrt(alt)), 2);
+}
+
+/** Lower cut-off rises to 2.0 after age 65 (EASL-EASD-EASO 2024 MASLD guideline). */
+export function fib4LowCutoff(age: number): number {
+  return age > 65 ? 2.0 : 1.3;
+}
+
+/** EASL-EASD-EASO 2024: below the low cut-off rules out advanced fibrosis; >2.67 needs hepatology work-up. */
+export function fib4Category(value: number, age: number): Fib4Category {
+  if (value > 2.67) return "high";
+  if (value < fib4LowCutoff(age)) return "low";
+  return "indeterminate";
+}
+
+// ─── Grip strength ───────────────────────────────────────────────────────────
+
+/** EWGSOP2 (Cruz-Jentoft et al., 2019): probable sarcopenia below 27 kg (men) / 16 kg (women). */
+export function lowGripStrength(kg: number, sex: Sex): boolean {
+  return sex === "male" ? kg < 27 : kg < 16;
+}
+
 export function pulsePressure(systolic: number, diastolic: number): number {
   return systolic - diastolic;
 }

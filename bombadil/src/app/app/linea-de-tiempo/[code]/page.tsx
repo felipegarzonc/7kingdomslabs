@@ -66,6 +66,17 @@ export default async function MarkerPage({ params }: { params: Promise<{ code: s
             </div>
           </dl>
           <p className="mt-3 text-xs text-muted">Fuente: {b.source}</p>
+          {b.evidence?.length ? (
+            <ul className="mt-2 flex flex-col gap-1 text-xs">
+              {b.evidence.map((e) => (
+                <li key={e.url}>
+                  <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-accent underline">
+                    {e.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {b.notes ? <p className="mt-1 text-xs text-muted">{b.notes}</p> : null}
         </Card>
         <Card title="Resultados">

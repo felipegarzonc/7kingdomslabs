@@ -49,6 +49,7 @@ async function onboard(page: Page, email: string) {
   await page.getByLabel("Fecha de nacimiento").fill("1982-08-15");
   await page.getByLabel("Sexo biológico").selectOption("male");
   await page.getByLabel("Estatura (cm)").fill("176");
+  await page.getByLabel("¿Fumas?").selectOption("never");
   await page.getByLabel(/Qué quieres lograr/).fill("Llegar a los 80 con energía.");
   await page.getByRole("button", { name: "Empezar" }).click();
   await expect(page).toHaveURL(/\/app$/);

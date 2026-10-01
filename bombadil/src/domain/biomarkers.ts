@@ -37,7 +37,23 @@ export interface Biomarker {
   meaningfulChange: number;
   source: string;
   notes?: string;
+  /** Key studies or guidelines behind the ranges, shown with links in the timeline. Not stored in the DB. */
+  evidence?: Evidence[];
 }
+
+export interface Evidence {
+  label: string;
+  url: string;
+}
+
+/** Shared references (verified Oct 2026; see the "Longevidad: base de evidencia" research doc). */
+const EV = {
+  easLdl: { label: "Ference et al., Eur Heart J 2017 — consenso EAS: el LDL causa enfermedad cardiovascular", url: "https://eprints.gla.ac.uk/140708" },
+  escLipids: { label: "Guías ESC/EAS 2019 de dislipidemias (metas de LDL y ApoB)", url: "https://archive-ouverte.unige.ch/unige:165849" },
+  easLpa: { label: "Kronenberg et al., Eur Heart J 2022 — consenso EAS sobre Lp(a)", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC9639807/" },
+  dpp: { label: "Diabetes Prevention Program, NEJM 2002 — el estilo de vida redujo 58 % la diabetes", url: "https://pubmed.ncbi.nlm.nih.gov/11832527/" },
+  easlMasld: { label: "Guía EASL-EASD-EASO 2024 de hígado graso (MASLD) y FIB-4", url: "https://air.unimi.it/retrieve/0a880a86-ba08-4c65-b360-8e3c6f92a121/s00125-024-06196-3.pdf" },
+} satisfies Record<string, Evidence>;
 
 const PENDING = "PENDIENTE DE VALIDAR con médico asesor.";
 
@@ -57,6 +73,7 @@ export const BIOMARKERS: Biomarker[] = [
     betterWhen: "in_range",
     meaningfulChange: 5,
     source: `Referencia: ADA Standards of Care 2025 (100–125 = prediabetes). Óptimo: criterio conservador, ${PENDING}`,
+    evidence: [EV.dpp],
   },
   {
     code: "hba1c",
@@ -73,6 +90,7 @@ export const BIOMARKERS: Biomarker[] = [
     betterWhen: "lower",
     meaningfulChange: 0.2,
     source: `Referencia: ADA 2025 (5.7–6.4 % prediabetes, ≥6.5 % diabetes). Óptimo: ${PENDING}`,
+    evidence: [EV.dpp],
   },
   {
     code: "total_cholesterol",
@@ -89,6 +107,7 @@ export const BIOMARKERS: Biomarker[] = [
     betterWhen: "lower",
     meaningfulChange: 15,
     source: `Referencia: NCEP ATP III (<200 mg/dL deseable). Óptimo: ${PENDING}`,
+    evidence: [EV.easLdl],
   },
   {
     code: "ldl",
@@ -105,6 +124,7 @@ export const BIOMARKERS: Biomarker[] = [
     betterWhen: "lower",
     meaningfulChange: 10,
     source: "NCEP ATP III: <100 óptimo, 100–129 cercano a óptimo, 130–159 limítrofe, ≥190 muy alto.",
+    evidence: [EV.easLdl, EV.escLipids],
   },
   {
     code: "hdl",
@@ -139,6 +159,42 @@ export const BIOMARKERS: Biomarker[] = [
     source: "NCEP ATP III (<150 normal). Óptimo <100: AHA Scientific Statement on Triglycerides (Miller et al., 2011).",
   },
   {
+    code: "apob",
+    name: "Apolipoproteína B (ApoB)",
+    category: "lipids",
+    synonyms: ["apob", "apo b", "apolipoproteina b", "apolipoproteína b", "apolipoproteina b100", "apo b-100", "apolipoprotein b"],
+    unit: "mg/dL",
+    conversions: [
+      { unit: "mg/dl", factor: 1 },
+      { unit: "g/l", factor: 100 },
+    ],
+    reference: { high: 119 },
+    optimal: { high: 89 },
+    betterWhen: "lower",
+    meaningfulChange: 8,
+    source: `Cuenta las partículas aterogénicas; mejor marcador de riesgo que el LDL cuando no coinciden. Metas ESC/EAS 2019: <100 mg/dL riesgo moderado, <80 alto, <65 muy alto. Referencia y óptimo: ${PENDING}`,
+    evidence: [EV.escLipids, EV.easLdl],
+  },
+  {
+    code: "lpa",
+    name: "Lipoproteína(a) — Lp(a)",
+    category: "lipids",
+    synonyms: ["lp(a)", "lpa", "lipoproteina a", "lipoproteína a", "lipoproteina (a)", "lipoproteína (a)", "lipoprotein(a)"],
+    unit: "mg/dL",
+    conversions: [
+      { unit: "mg/dl", factor: 1 },
+      // Molar ↔ mass conversion depends on isoform size; ~2.15 nmol/L per mg/dL is the usual approximation.
+      { unit: "nmol/l", factor: 0.465 },
+    ],
+    reference: { high: 49 },
+    optimal: { high: 29 },
+    betterWhen: "lower",
+    meaningfulChange: 10,
+    source: `Mayormente genética; basta medirla una vez en la vida. Consenso EAS 2022: >50 mg/dL (~105 nmol/L) aumenta el riesgo cardiovascular, <30 mg/dL lo descarta. ${PENDING}`,
+    notes: "La conversión desde nmol/L es aproximada.",
+    evidence: [EV.easLpa],
+  },
+  {
     code: "ast",
     name: "AST (TGO)",
     category: "liver",
@@ -150,6 +206,7 @@ export const BIOMARKERS: Biomarker[] = [
     betterWhen: "lower",
     meaningfulChange: 5,
     source: `Referencia: rango típico de laboratorio (preferir el del informe). Óptimo: ${PENDING}`,
+    evidence: [EV.easlMasld],
   },
   {
     code: "alt",
@@ -163,6 +220,7 @@ export const BIOMARKERS: Biomarker[] = [
     betterWhen: "lower",
     meaningfulChange: 5,
     source: "Referencia: rango típico de laboratorio. Óptimo: ACG Clinical Guideline (Kwo et al., 2017) — ALT normal 29–33 U/L hombres, 19–25 U/L mujeres.",
+    evidence: [EV.easlMasld],
   },
   {
     code: "ggt",
@@ -317,6 +375,7 @@ export const BIOMARKERS: Biomarker[] = [
     betterWhen: "in_range",
     meaningfulChange: 30,
     source: "Rango típico de laboratorio.",
+    evidence: [EV.easlMasld],
   },
   {
     code: "wbc",

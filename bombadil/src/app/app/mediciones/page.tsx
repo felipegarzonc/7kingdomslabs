@@ -17,7 +17,7 @@ export default async function MeasurementsPage() {
   const supabase = await createClient();
   const { measurements } = await loadParticipantData(supabase, p.id);
   const bp = pairBloodPressure(measurements.map((m) => ({ type: m.type, value: m.value, at: m.measured_at, groupId: m.group_id, context: m.context })));
-  const series = (["weight", "waist", "resting_hr", "sleep_hours", "exercise_minutes"] as const)
+  const series = (["weight", "waist", "resting_hr", "sleep_hours", "exercise_minutes", "grip_strength", "vo2max", "alcohol_drinks"] as const)
     .map((t) => ({ t, points: measurements.filter((m) => m.type === t).map((m) => ({ at: m.measured_at, value: m.value })) }))
     .filter((s) => s.points.length);
   const recent = [...measurements].reverse().filter((m) => m.type !== "bp_diastolic").slice(0, 20);
@@ -25,7 +25,7 @@ export default async function MeasurementsPage() {
 
   return (
     <>
-      <PageHeader title="Mediciones" subtitle="Presión, peso, cintura, frecuencia cardiaca, sueño y ejercicio." />
+      <PageHeader title="Mediciones" subtitle="Presión, peso, cintura, frecuencia cardiaca, sueño, ejercicio, fuerza y capacidad física." />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <Card title="Nueva medición" className="self-start">
           <MeasurementForm />

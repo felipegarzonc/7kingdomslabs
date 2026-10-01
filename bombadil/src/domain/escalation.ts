@@ -27,8 +27,12 @@ const ConditionSchema = z
   })
   .strict();
 
+export const DERIVED_METRICS = ["fib4"] as const;
+export type DerivedMetric = (typeof DERIVED_METRICS)[number];
+
 const SubjectSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("measurement"), type: z.string() }),
+  z.object({ kind: z.literal("derived"), metric: z.enum(DERIVED_METRICS) }),
   z.object({ kind: z.literal("biomarker"), code: z.string() }),
   z.object({ kind: z.literal("symptom"), symptom: z.enum(SYMPTOMS) }),
   z.object({ kind: z.literal("keyword"), keywords: z.array(z.string()).min(1) }),
@@ -38,6 +42,9 @@ export const RuleSchema = z.object({
   id: z.string(),
   level: z.enum(["urgency", "consult_soon", "next_visit"]),
   sex: z.enum(["male", "female"]).optional(),
+  /** Inclusive age bounds; a rule with bounds is skipped when the age is unknown. */
+  ageMin: z.number().int().optional(),
+  ageMax: z.number().int().optional(),
   subject: SubjectSchema,
   condition: ConditionSchema.optional(),
   message: z.string(),
@@ -66,6 +73,9 @@ export interface EscalationInput {
   sex: Sex;
   measurements?: Array<{ type: MeasurementType; value: number }>;
   biomarkers?: Array<{ code: string; value: number }>;
+  /** Computed metrics such as FIB-4. */
+  derived?: Array<{ metric: DerivedMetric; value: number }>;
+  age?: number | null;
   symptoms?: Symptom[];
   freeText?: string | null;
 }
@@ -118,6 +128,11 @@ export function evaluateEscalation(input: EscalationInput, ruleset: RuleSet = DE
   const out: TriggeredRule[] = [];
   for (const rule of ruleset.rules) {
     if (rule.sex && rule.sex !== input.sex) continue;
+    if (rule.ageMin !== undefined || rule.ageMax !== undefined) {
+      if (input.age == null) continue;
+      if (rule.ageMin !== undefined && input.age < rule.ageMin) continue;
+      if (rule.ageMax !== undefined && input.age > rule.ageMax) continue;
+    }
     const s = rule.subject;
     const fire = (evidence: string) =>
       out.push({ ruleId: rule.id, level: rule.level, message: rule.message, source: rule.source, evidence });
@@ -131,6 +146,11 @@ export function evaluateEscalation(input: EscalationInput, ruleset: RuleSet = DE
       case "biomarker":
         for (const b of input.biomarkers ?? []) {
           if (b.code === s.code && matchesCondition(b.value, rule.condition)) fire(`${b.code}=${b.value}`);
+        }
+        break;
+      case "derived":
+        for (const d of input.derived ?? []) {
+          if (d.metric === s.metric && matchesCondition(d.value, rule.condition)) fire(`${d.metric}=${d.value}`);
         }
         break;
       case "symptom":

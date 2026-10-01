@@ -106,7 +106,7 @@ export default async function ParticipantHome() {
 
         <Card title="Últimas mediciones" action={<Link href="/app/mediciones" className="text-sm font-medium text-accent">Registrar</Link>}>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {(["weight", "waist", "resting_hr", "sleep_hours"] as const).map((t) => (
+            {(["weight", "waist", "resting_hr", "sleep_hours", "grip_strength", "vo2max"] as const).map((t) => (
               <div key={t} className="rounded-xl bg-surface-2 p-3">
                 <dt className="text-xs text-muted">{MEASUREMENT_LABEL[t]}</dt>
                 <dd className="mt-0.5 text-lg font-semibold tabular-nums">

@@ -28,7 +28,7 @@ export function snapshotForPrompt(s: Snapshot) {
 }
 
 export async function generateReport(snapshot: Snapshot): Promise<{ content: ReportContent; promptVersion: string; model: string }> {
-  const prompt = await loadPrompt("report", 1);
+  const prompt = await loadPrompt("report", 2);
   const model = llmConfig.model();
   try {
     const msg = await anthropic().beta.messages.parse({

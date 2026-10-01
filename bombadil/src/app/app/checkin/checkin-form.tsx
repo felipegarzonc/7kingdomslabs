@@ -75,6 +75,9 @@ export function CheckinForm({ priorities, week }: { priorities: string[]; week: 
           <Field label="Ejercicio total (min)" htmlFor="exercise_minutes">
             <Input id="exercise_minutes" name="exercise_minutes" inputMode="numeric" />
           </Field>
+          <Field label="Tragos de alcohol" htmlFor="alcohol_drinks" hint="1 trago = 1 cerveza, 1 copa de vino o 1 shot. 0 si no tomaste.">
+            <Input id="alcohol_drinks" name="alcohol_drinks" inputMode="numeric" />
+          </Field>
         </div>
       </fieldset>
 

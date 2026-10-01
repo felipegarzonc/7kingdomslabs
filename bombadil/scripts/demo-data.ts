@@ -40,7 +40,7 @@ export async function seedDemo(db: SupabaseClient, opts: { participantEmail: str
   const { data: p } = check(
     await db
       .from("participants")
-      .insert({ auth_user_id: userId, email, display_name: "Felipe (demo)", birth_date: "1982-08-15", sex: "male", height_cm: 176, personal_goal: "Llegar a los 80 con energía y sin medicamentos.", priorities, pilot_start: start, status: "active" })
+      .insert({ auth_user_id: userId, email, display_name: "Felipe (demo)", birth_date: "1982-08-15", sex: "male", height_cm: 176, personal_goal: "Llegar a los 80 con energía y sin medicamentos.", smoking_status: "former", priorities, pilot_start: start, status: "active" })
       .select("id")
       .single(),
     "participant",
@@ -53,7 +53,7 @@ export async function seedDemo(db: SupabaseClient, opts: { participantEmail: str
   const labs: Array<{ date: string; lab: string; rows: Row[] }> = [
     { date: "2023-03-10", lab: "Colcan", rows: [["hdl", "mg/dL", 46, 40, null], ["triglycerides", "mg/dL", 150, null, 150], ["alt", "U/L", 30, null, 41], ["ast", "U/L", 24, null, 40], ["glucose_fasting", "mg/dL", 94, 70, 100], ["ldl", "mg/dL", 128, null, 130], ["total_cholesterol", "mg/dL", 205, null, 200], ["hba1c", "%", 5.4, null, 5.7], ["vitamin_d", "ng/mL", 24, 30, 100]] },
     { date: "2025-04-02", lab: "Sura", rows: [["hdl", "mg/dL", 41, 40, null], ["triglycerides", "mg/dL", 188, null, 150], ["alt", "U/L", 41, null, 41], ["ast", "U/L", 29, null, 40], ["glucose_fasting", "mg/dL", 99, 70, 100], ["ldl", "mg/dL", 134, null, 130], ["total_cholesterol", "mg/dL", 210, null, 200], ["hba1c", "%", 5.6, null, 5.7], ["vitamin_d", "ng/mL", 31, 30, 100]] },
-    { date: "2026-05-20", lab: "Dinámica", rows: [["hdl", "mg/dL", 37, 40, null], ["triglycerides", "mmol/L", 2.61, null, 1.69], ["alt", "U/L", 52, null, 41], ["ast", "U/L", 36, null, 40], ["glucose_fasting", "mg/dL", 102, 70, 100], ["ldl", "mg/dL", 131, null, 130], ["total_cholesterol", "mg/dL", 212, null, 200], ["hba1c", "%", 5.7, null, 5.7], ["vitamin_d", "ng/mL", 38, 30, 100], ["hscrp", "mg/L", 2.1, null, 3], ["tsh", "mUI/L", 2.3, 0.4, 4]] },
+    { date: "2026-05-20", lab: "Dinámica", rows: [["hdl", "mg/dL", 37, 40, null], ["triglycerides", "mmol/L", 2.61, null, 1.69], ["alt", "U/L", 52, null, 41], ["ast", "U/L", 36, null, 40], ["glucose_fasting", "mg/dL", 102, 70, 100], ["ldl", "mg/dL", 131, null, 130], ["total_cholesterol", "mg/dL", 212, null, 200], ["hba1c", "%", 5.7, null, 5.7], ["vitamin_d", "ng/mL", 38, 30, 100], ["hscrp", "mg/L", 2.1, null, 3], ["tsh", "mUI/L", 2.3, 0.4, 4], ["platelets", "x10^3/uL", 210, 150, 450], ["apob", "g/L", 1.12, null, 1.3], ["lpa", "nmol/L", 62, null, 75]] },
   ];
   for (const l of labs) {
     const { data: doc } = check(
@@ -87,7 +87,12 @@ export async function seedDemo(db: SupabaseClient, opts: { participantEmail: str
       { type: "waist", value: +(99 - w * 0.4).toFixed(1), unit: "cm", measured_at: at, source: "checkin" },
       { type: "sleep_hours", value: +(6.1 + w * 0.15).toFixed(1), unit: "h", measured_at: at, source: "checkin" },
       { type: "exercise_minutes", value: 60 + w * 25, unit: "min", measured_at: at, source: "checkin" },
+      { type: "alcohol_drinks", value: Math.max(3, 9 - w), unit: "tragos", measured_at: at, source: "checkin" },
     );
+    // Monthly strength and fitness checks.
+    if (w % 4 === 0) {
+      m.push({ type: "grip_strength", value: 38 + w * 0.5, unit: "kg", measured_at: at }, { type: "vo2max", value: 33 + w * 0.5, unit: "ml/kg/min", measured_at: at });
+    }
     const g = crypto.randomUUID();
     const ctx = { arm: "left", period: "day" };
     m.push({ type: "bp_systolic", value: 147 - w, unit: "mmHg", measured_at: at, group_id: g, context: ctx }, { type: "bp_diastolic", value: 81 - (w % 2), unit: "mmHg", measured_at: at, group_id: g, context: ctx });

@@ -27,7 +27,12 @@ export type MeasurementType =
   | "bp_diastolic"
   | "resting_hr"
   | "sleep_hours"
-  | "exercise_minutes";
+  | "exercise_minutes"
+  | "grip_strength"
+  | "vo2max"
+  | "alcohol_drinks";
+
+export type SmokingStatus = "never" | "former" | "current";
 
 export type EscalationLevel = "urgency" | "consult_soon" | "next_visit";
 

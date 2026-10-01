@@ -82,6 +82,7 @@ export function toSnapshotInput(participant: ParticipantRow, data: Awaited<Retur
     birthDate: participant.birth_date,
     heightCm: participant.height_cm ? Number(participant.height_cm) : null,
     personalGoal: participant.personal_goal,
+    smokingStatus: participant.smoking_status,
     labs,
     measurements,
     goals,

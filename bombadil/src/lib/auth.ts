@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import type { SmokingStatus } from "@/domain/types";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ParticipantRow {
@@ -12,6 +13,7 @@ export interface ParticipantRow {
   sex: "male" | "female" | null;
   height_cm: number | null;
   personal_goal: string | null;
+  smoking_status: SmokingStatus | null;
   priorities: string[];
   pilot_start: string | null;
   status: "invited" | "active" | "withdrawn" | "completed";

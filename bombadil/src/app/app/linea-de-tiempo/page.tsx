@@ -64,6 +64,11 @@ export default async function TimelinePage() {
                 value={d.dipping ? `${fmtNum(d.dipping.dipPercent)} % · ${{ dipper: "normal", non_dipper: "insuficiente", reverse_dipper: "invertido", extreme_dipper: "extremo" }[d.dipping.pattern]}` : "—"}
                 hint="Normal: 10–20 %"
               />
+              <Derived
+                label="FIB-4 (hígado)"
+                value={d.fib4 ? `${fmtNum(d.fib4.value)} · ${{ low: "bajo", indeterminate: "intermedio", high: "alto" }[d.fib4.category]}` : "—"}
+                hint={`Bajo < ${d.fib4 ? fmtNum(d.fib4.lowCutoff) : "1,3"} · alto > 2,67 (EASL 2024)`}
+              />
               <Derived label="Presión de pulso" value={d.dipping ? `${fmtNum(d.dipping.meanPulsePressure, 0)} mmHg` : d.bp ? `${fmtNum(d.bp.recentMeanSystolic - d.bp.recentMeanDiastolic, 0)} mmHg` : "—"} />
             </dl>
           </Card>

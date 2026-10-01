@@ -14,9 +14,9 @@ metas cortas y un check-in semanal de menos de 2 minutos.
 |---|---|
 | Consentimiento informado versionado + onboarding | Invita participantes por correo |
 | Sube PDFs de laboratorio | Revisa y corrige cada extracción al lado del PDF original |
-| Registra presión (brazo, día/noche), peso, cintura, FC, sueño, ejercicio | Genera, edita y aprueba informes antes de que el participante los vea |
+| Registra presión (brazo, día/noche), peso, cintura, FC, sueño, ejercicio, fuerza de agarre, VO2max y tragos de alcohol por semana | Genera, edita y aprueba informes antes de que el participante los vea |
 | Línea de tiempo por marcador con rango de referencia y tendencia | Revisa y envía las respuestas a los check-ins |
-| Métricas derivadas: IMC, cintura/estatura, no-HDL, TG/HDL, síndrome metabólico (ATP III e IDF), descenso nocturno de PA | Panel del piloto: retención semana a semana, efecto medible, disposición a pagar |
+| Métricas derivadas: IMC, cintura/estatura, no-HDL, TG/HDL, FIB-4 (hígado), síndrome metabólico (ATP III e IDF), descenso nocturno de PA | Panel del piloto: retención semana a semana, efecto medible, disposición a pagar |
 | Metas a 3/6/12 meses con estado (en camino / estancada / retrocediendo) | Alertas deterministas (urgencia / consultar pronto / próxima cita) |
 | Check-in semanal con respuesta del equipo | Registro de auditoría de cada acceso a datos |
 | Informes aprobados; exportar o eliminar todos sus datos | Exportar o eliminar datos de un participante |

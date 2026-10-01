@@ -21,7 +21,8 @@ Producto y requisitos: `docs/BRIEF.md` (brief "Sakura"). Plan y decisiones: `doc
 ## Despliegue (estado actual)
 
 - Supabase de producción: proyecto `imwsoftnxhrhazgranay` (us-east-2), ya con `supabase/setup.sql` aplicado y el
-  operador `felipegarzonc@gmail.com` creado. No volver a correr setup.sql ahí.
+  operador `felipegarzonc@gmail.com` creado. No volver a correr setup.sql ahí: los cambios posteriores se aplican
+  corriendo solo las migraciones nuevas y luego `supabase/seed.sql` (es idempotente: hace upsert del catálogo).
 - Publicar en Vercel: `npx tsx scripts/deploy-vercel.ts` (lee `VERCEL_TOKEN`, `SUPABASE_ACCESS_TOKEN`,
   `BOMBADIL_ANTHROPIC_API_KEY` del entorno; nunca pedirlas en el chat). Crea/actualiza el proyecto, variables,
   publica la rama del PR, fija las URLs de acceso en Supabase y revisa `/estado`.

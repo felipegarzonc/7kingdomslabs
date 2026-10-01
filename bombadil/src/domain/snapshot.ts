@@ -9,7 +9,11 @@ import {
   bmi,
   bmiCategory,
   bpCategory,
+  fib4,
+  fib4Category,
+  fib4LowCutoff,
   isIsolatedSystolic,
+  lowGripStrength,
   metabolicSyndromeATP,
   metabolicSyndromeIDF,
   nocturnalDipping,
@@ -17,11 +21,12 @@ import {
   tgHdlRatio,
   waistToHeight,
   type BpReading,
+  type Fib4Category,
 } from "./derived";
 import { evaluateEscalation, type TriggeredRule } from "./escalation";
 import { evaluateGoal, type GoalEvaluation } from "./goals";
 import { computeTrend, sortByDate, type Trend } from "./trends";
-import type { DatedValue, Flag, MeasurementType, OptimalFlag, Range, Sex } from "./types";
+import type { DatedValue, Flag, MeasurementType, OptimalFlag, Range, Sex, SmokingStatus } from "./types";
 import { round } from "./units";
 
 export interface LabPoint {
@@ -56,6 +61,7 @@ export interface SnapshotInput {
   birthDate: string | null;
   heightCm: number | null;
   personalGoal?: string | null;
+  smokingStatus?: SmokingStatus | null;
   labs: LabPoint[];
   measurements: MeasurementPoint[];
   goals: GoalRow[];
@@ -83,7 +89,7 @@ export interface Pattern {
 
 export interface Snapshot {
   asOf: string;
-  profile: { sex: Sex; age: number | null; heightCm: number | null; personalGoal: string | null };
+  profile: { sex: Sex; age: number | null; heightCm: number | null; personalGoal: string | null; smokingStatus: SmokingStatus | null };
   markers: MarkerSummary[];
   groups: { worsened: string[]; improved: string[]; stable: string[]; singleValue: string[] };
   derived: {
@@ -91,6 +97,8 @@ export interface Snapshot {
     waistToHeight: number | null;
     nonHdl: number | null;
     tgHdl: number | null;
+    /** Liver fibrosis risk from age, AST, ALT and platelets (same lab panel when available). */
+    fib4: { value: number; category: Fib4Category; lowCutoff: number; ageAtTest: number; at: string } | null;
     bp: {
       recentMeanSystolic: number;
       recentMeanDiastolic: number;
@@ -187,7 +195,7 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
 
   // ── Measurements ──
   const measurementsLatest: Snapshot["measurementsLatest"] = {};
-  for (const t of ["weight", "waist", "bp_systolic", "bp_diastolic", "resting_hr", "sleep_hours", "exercise_minutes"] as const) {
+  for (const t of MEASUREMENT_TYPES) {
     const l = latestOf(input.measurements.filter((m) => m.type === t));
     if (l) measurementsLatest[t] = { at: l.at, value: l.value };
   }
@@ -219,11 +227,13 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     fastingGlucose: latestValue("glucose_fasting"),
   };
 
+  const age = ageFrom(input.birthDate, asOf);
   const derived: Snapshot["derived"] = {
     bmi: weight && input.heightCm ? { value: bmi(weight, input.heightCm), category: bmiCategory(bmi(weight, input.heightCm)) } : null,
     waistToHeight: waist && input.heightCm ? waistToHeight(waist, input.heightCm) : null,
     nonHdl: tc !== null && hdl !== null ? nonHdl(tc, hdl) : null,
     tgHdl: tg !== null && hdl ? tgHdlRatio(tg, hdl) : null,
+    fib4: fib4For(markers, input.birthDate),
     bp,
     dipping: nocturnalDipping(bpReadings),
     metabolicSyndrome: { atp: metabolicSyndromeATP(metabolicInputs), idf: metabolicSyndromeIDF(metabolicInputs) },
@@ -266,12 +276,42 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     patterns.push({ id: "non_dipper", label: "Patrón nocturno de presión sin descenso adecuado", evidence: [`descenso nocturno ${derived.dipping.dipPercent} %`] });
   }
 
+  if (derived.fib4 && derived.fib4.category !== "low") {
+    patterns.push({
+      id: "liver_fibrosis_risk",
+      label: derived.fib4.category === "high" ? "FIB-4 alto: riesgo de fibrosis hepática" : "FIB-4 en zona intermedia: fibrosis hepática no descartada",
+      evidence: [`FIB-4 ${derived.fib4.value} (corte inferior ${derived.fib4.lowCutoff}, superior 2,67)`],
+    });
+  }
+  const lpa = m("lpa");
+  if (lpa && lpa.latest.value > 50) {
+    patterns.push({
+      id: "lpa_elevated",
+      label: "Lp(a) elevada: riesgo cardiovascular heredado",
+      evidence: [`Lp(a) ${lpa.latest.value} mg/dL (>50)`, "no cambia con hábitos; hace más importante bajar LDL/ApoB y presión"],
+    });
+  }
+  if (input.smokingStatus === "current") {
+    patterns.push({ id: "smoking", label: "Fuma actualmente", evidence: ["fumar resta más de 10 años de vida; dejarlo antes de los 40 elimina ~90 % del exceso de riesgo"] });
+  }
+  const drinks = measurementsLatest.alcohol_drinks?.value;
+  if (drinks !== undefined && drinks > 7) {
+    patterns.push({ id: "alcohol_above_low_risk", label: "Alcohol por encima del umbral de menor riesgo", evidence: [`${drinks} tragos en la última semana reportada (menor riesgo: ≤7)`] });
+  }
+  const grip = measurementsLatest.grip_strength?.value;
+  if (grip !== undefined && lowGripStrength(grip, sex)) {
+    patterns.push({ id: "low_grip_strength", label: "Fuerza de agarre baja", evidence: [`${grip} kg (umbral EWGSOP2: <${sex === "male" ? 27 : 16} kg)`] });
+  }
+
   // ── Escalations (on the latest values only) ──
   const recentMeasurements = input.measurements.filter((x) => Date.parse(x.at) >= recentFrom);
   const escalations = evaluateEscalation({
     sex,
     biomarkers: markers.map((x) => ({ code: x.code, value: x.latest.value })),
     measurements: recentMeasurements.map((x) => ({ type: x.type, value: x.value })),
+    derived: derived.fib4 ? [{ metric: "fib4", value: derived.fib4.value }] : [],
+    // Only the FIB-4 rules are age-bounded, and their cut-offs apply to the age at the test.
+    age: derived.fib4?.ageAtTest ?? age,
   });
 
   // ── Goals ──
@@ -283,7 +323,7 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
 
   return {
     asOf: asOf.toISOString(),
-    profile: { sex, age: ageFrom(input.birthDate, asOf), heightCm: input.heightCm, personalGoal: input.personalGoal ?? null },
+    profile: { sex, age, heightCm: input.heightCm, personalGoal: input.personalGoal ?? null, smokingStatus: input.smokingStatus ?? null },
     markers,
     groups,
     derived,
@@ -292,6 +332,30 @@ export function buildSnapshot(input: SnapshotInput): Snapshot {
     escalations,
     goals,
   };
+}
+
+/**
+ * FIB-4 needs AST, ALT and platelets from the same sample: uses the most
+ * recent date that has all three, with the age on that date.
+ */
+function fib4For(markers: MarkerSummary[], birthDate: string | null): Snapshot["derived"]["fib4"] {
+  if (!birthDate) return null;
+  const byCode = (code: string) => markers.find((x) => x.code === code)?.history ?? [];
+  const ast = byCode("ast");
+  const alt = byCode("alt");
+  const plt = byCode("platelets");
+  const day = (at: string) => at.slice(0, 10);
+  for (const a of [...ast].reverse()) {
+    const l = alt.find((x) => day(x.at) === day(a.at));
+    const p = plt.find((x) => day(x.at) === day(a.at));
+    if (!l || !p) continue;
+    const age = ageFrom(birthDate, new Date(a.at));
+    if (age === null) return null;
+    const value = fib4(age, a.value, l.value, p.value);
+    if (value === null) return null;
+    return { value, category: fib4Category(value, age), lowCutoff: fib4LowCutoff(age), ageAtTest: age, at: a.at };
+  }
+  return null;
 }
 
 /** A label for any goal metric (measurement type or biomarker code). */
@@ -313,7 +377,12 @@ export const MEASUREMENT_LABEL: Record<MeasurementType, string> = {
   resting_hr: "Frecuencia cardiaca en reposo",
   sleep_hours: "Horas de sueño",
   exercise_minutes: "Minutos de ejercicio",
+  grip_strength: "Fuerza de agarre",
+  vo2max: "VO2max estimado",
+  alcohol_drinks: "Tragos de alcohol (semana)",
 };
+
+export const MEASUREMENT_TYPES = Object.keys(MEASUREMENT_LABEL) as MeasurementType[];
 
 export const MEASUREMENT_UNIT: Record<MeasurementType, string> = {
   weight: "kg",
@@ -323,6 +392,9 @@ export const MEASUREMENT_UNIT: Record<MeasurementType, string> = {
   resting_hr: "lpm",
   sleep_hours: "h",
   exercise_minutes: "min",
+  grip_strength: "kg",
+  vo2max: "ml/kg/min",
+  alcohol_drinks: "tragos",
 };
 
 /** Plausibility bounds to catch typos on manual entry. */
@@ -334,4 +406,7 @@ export const MEASUREMENT_BOUNDS: Record<MeasurementType, [number, number]> = {
   resting_hr: [25, 220],
   sleep_hours: [0, 16],
   exercise_minutes: [0, 1440],
+  grip_strength: [5, 100],
+  vo2max: [10, 90],
+  alcohol_drinks: [0, 150],
 };

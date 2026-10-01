@@ -7,8 +7,9 @@ import { z } from "zod";
 import { BIOMARKER_BY_CODE } from "@/domain/biomarkers";
 import { canConvert, classify, toCanonical } from "@/domain/classify";
 import { evaluateEscalation } from "@/domain/escalation";
+import { fib4 } from "@/domain/derived";
 import { deadlineFor } from "@/domain/goals";
-import { buildSnapshot } from "@/domain/snapshot";
+import { ageFrom, buildSnapshot } from "@/domain/snapshot";
 import { deleteParticipantCompletely } from "@/lib/account";
 import { raiseAlerts } from "@/lib/alerts";
 import { logAdminAccess } from "@/lib/audit";
@@ -263,7 +264,18 @@ export async function saveReview(_prev: AdminState, form: FormData): Promise<Adm
 
   // Deterministic escalation on the reviewed values (replaces earlier alerts from this document).
   await supabase.from("alerts").delete().eq("origin", "lab").eq("origin_id", documentId).eq("status", "open");
-  const triggered = evaluateEscalation({ sex: participant.sex ?? "male", biomarkers: results.map((r) => ({ code: r.biomarker_code, value: r.value_canonical })) });
+  const value = (code: string) => results.find((r) => r.biomarker_code === code)?.value_canonical;
+  const ageAtSample = ageFrom(participant.birth_date, new Date(sampledOn));
+  const ast = value("ast");
+  const alt = value("alt");
+  const plt = value("platelets");
+  const fib4Value = ageAtSample !== null && ast !== undefined && alt !== undefined && plt !== undefined ? fib4(ageAtSample, ast, alt, plt) : null;
+  const triggered = evaluateEscalation({
+    sex: participant.sex ?? "male",
+    age: ageAtSample,
+    biomarkers: results.map((r) => ({ code: r.biomarker_code, value: r.value_canonical })),
+    derived: fib4Value !== null ? [{ metric: "fib4", value: fib4Value }] : [],
+  });
   await raiseAlerts(supabase, doc.participant_id, triggered, "lab", documentId);
   await logAdminAccess(supabase, admin.userId, "review_lab", doc.participant_id, { document_id: documentId, results: results.length, corrections: results.filter((r) => r.corrected_by_admin).length });
 

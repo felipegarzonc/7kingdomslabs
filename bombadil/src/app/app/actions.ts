@@ -40,7 +40,7 @@ function localToIso(local: string | undefined): string {
 // ─── Measurements ───────────────────────────────────────────────────────────
 
 const MeasurementForm = z.object({
-  type: z.enum(["weight", "waist", "bp", "resting_hr", "sleep_hours", "exercise_minutes"]),
+  type: z.enum(["weight", "waist", "bp", "resting_hr", "sleep_hours", "exercise_minutes", "grip_strength", "vo2max"]),
   value: optionalNumber,
   systolic: optionalNumber,
   diastolic: optionalNumber,
@@ -117,7 +117,7 @@ export async function submitCheckin(_prev: ActionState, form: FormData): Promise
   };
 
   const measurements: Array<{ type: MeasurementType; value: number; group_id?: string }> = [];
-  for (const t of ["weight", "waist", "resting_hr", "sleep_hours", "exercise_minutes"] as const) {
+  for (const t of ["weight", "waist", "resting_hr", "sleep_hours", "exercise_minutes", "alcohol_drinks"] as const) {
     const val = num(t);
     if (val !== undefined) measurements.push({ type: t, value: val });
   }
@@ -249,13 +249,17 @@ export async function archiveGoal(form: FormData): Promise<void> {
 
 // ─── Profile, feedback, data rights ─────────────────────────────────────────
 
+const SmokingStatusSchema = z.enum(["never", "former", "current"]);
+
 export async function updateProfile(_prev: ActionState, form: FormData): Promise<ActionState> {
   await requireParticipant();
   const height = Number(form.get("height_cm"));
   const goal = String(form.get("personal_goal") ?? "").trim();
+  const smoking = SmokingStatusSchema.safeParse(form.get("smoking_status"));
   if (!(height >= 100 && height <= 250)) return { error: "Estatura inválida." };
+  if (!smoking.success) return { error: "Elige si fumas." };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("update_my_profile", { p_height_cm: height, p_personal_goal: goal.slice(0, 1000) });
+  const { error } = await supabase.rpc("update_my_profile", { p_height_cm: height, p_personal_goal: goal.slice(0, 1000), p_smoking_status: smoking.data });
   if (error) return { error: "No se pudo actualizar." };
   revalidatePath("/app", "layout");
   return { ok: true, message: "Datos actualizados." };

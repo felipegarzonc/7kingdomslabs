@@ -17,7 +17,7 @@ export default async function MyDataPage() {
       <PageHeader title="Mis datos" subtitle="Tus derechos bajo la Ley 1581 de 2012: conocer, actualizar, descargar y suprimir tus datos." />
       <div className="grid gap-4 md:grid-cols-2">
         <Card title="Perfil">
-          <ProfileForm height={p.height_cm} goal={p.personal_goal} />
+          <ProfileForm height={p.height_cm} goal={p.personal_goal} smoking={p.smoking_status} />
         </Card>
         <div className="flex flex-col gap-4">
           <Card title="Descargar mis datos">

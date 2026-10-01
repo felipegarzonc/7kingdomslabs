@@ -69,8 +69,8 @@ describe.skipIf(!url)("row level security", () => {
     ]) {
       await as(uid, mail, () => q("select public.link_participant()"));
     }
-    await asA(() => q("select public.complete_onboarding('1982-01-01','male',176,'meta A','v1','hashA','ua')"));
-    await asB(() => q("select public.complete_onboarding('1990-01-01','female',165,'meta B','v1','hashB','ua')"));
+    await asA(() => q("select public.complete_onboarding('1982-01-01','male',176,'meta A','never','v1','hashA','ua')"));
+    await asB(() => q("select public.complete_onboarding('1990-01-01','female',165,'meta B','current','v1','hashB','ua')"));
 
     // Participant data.
     await asA(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,'weight',88,'kg',now())", [ids.pA]));
@@ -126,6 +126,29 @@ describe.skipIf(!url)("row level security", () => {
     expect(p.rows[0].id).toBe(ids.pA);
     expect(p.rows[0].status).toBe("active");
     expect(p.rows[0].pilot_start).not.toBeNull();
+  });
+
+  it("onboarding and profile updates store the smoking status, only for oneself", async () => {
+    const before = await asB(() => q("select smoking_status from public.participants"));
+    expect(before.rows[0].smoking_status).toBe("current");
+    await asB(() => q("select public.update_my_profile(165,'meta B','former')"));
+    const after = await asB(() => q("select smoking_status from public.participants"));
+    expect(after.rows[0].smoking_status).toBe("former");
+    const a = await asA(() => q("select smoking_status from public.participants"));
+    expect(a.rows[0].smoking_status).toBe("never");
+    await expect(asB(() => q("select public.update_my_profile(165,'meta B','sometimes')"))).rejects.toThrow(/check constraint/);
+  });
+
+  it("accepts the new longevity measurement types and rejects unknown ones", async () => {
+    for (const [type, unit] of [
+      ["grip_strength", "kg"],
+      ["vo2max", "ml/kg/min"],
+      ["alcohol_drinks", "tragos"],
+    ]) {
+      const r = await asB(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,$2,30,$3,now()) returning id", [ids.pB, type, unit]));
+      await asB(() => q("delete from public.measurements where id = $1", [r.rows[0].id]));
+    }
+    await expect(asB(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,'steps',1,'x',now())", [ids.pB]))).rejects.toThrow(/check constraint/);
   });
 
   it("consent is recorded with version and hash", async () => {

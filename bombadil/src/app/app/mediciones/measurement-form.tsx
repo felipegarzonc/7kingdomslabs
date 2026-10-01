@@ -14,13 +14,26 @@ const TYPES = [
   { value: "resting_hr", label: "Frecuencia cardiaca en reposo", unit: "lpm" },
   { value: "sleep_hours", label: "Horas de sueño (noche)", unit: "h" },
   { value: "exercise_minutes", label: "Minutos de ejercicio (día)", unit: "min" },
+  {
+    value: "grip_strength",
+    label: "Fuerza de agarre",
+    unit: "kg",
+    hint: "Con un dinamómetro de mano: de pie, brazo junto al cuerpo, aprieta 3 veces con tu mano más fuerte y anota el mejor intento.",
+  },
+  {
+    value: "vo2max",
+    label: "VO2max estimado",
+    unit: "ml/kg/min",
+    hint: "El que calcula tu reloj o app (Garmin, Apple, Polar…) o una prueba de esfuerzo. Anótalo una vez al mes.",
+  },
 ];
 
 export function MeasurementForm() {
   const [state, action] = useActionState<ActionState, FormData>(addMeasurement, null);
   const [type, setType] = useState("bp");
   const [key, setKey] = useState(0);
-  const unit = TYPES.find((t) => t.value === type)?.unit;
+  const selected = TYPES.find((t) => t.value === type);
+  const unit = selected?.unit;
 
   return (
     <form
@@ -70,7 +83,7 @@ export function MeasurementForm() {
           <p className="text-xs text-muted">Mide sentado, tras 5 minutos de reposo, con la espalda apoyada y el brazo a la altura del corazón.</p>
         </>
       ) : (
-        <Field label={`Valor (${unit})`} htmlFor="value">
+        <Field label={`Valor (${unit})`} htmlFor="value" hint={selected?.hint}>
           <Input id="value" name="value" inputMode="decimal" required />
         </Field>
       )}

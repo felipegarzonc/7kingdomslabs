@@ -124,6 +124,11 @@ test("lifestyle questionnaire → personalised habit plan → logging today", as
   await page.getByRole("button", { name: "Lo hice" }).first().click();
   await expect(page.getByText("Tus hábitos · 1 de 3 hoy")).toBeVisible();
   await expect(page.getByText("1/5 esta semana").first()).toBeVisible();
+  // The game layer: XP for today's habit, a lit streak and the week's missions.
+  await expect(page.getByText("Aprendiz del bosque")).toBeVisible();
+  await expect(page.getByText("+10 hoy")).toBeVisible();
+  await expect(page.getByText("1 día de racha")).toBeVisible();
+  await expect(page.getByText("Misiones de la semana")).toBeVisible();
   await snap(page, "02b-today");
   await noHorizontalScroll(page);
   await page.goto("/app/plan");
@@ -174,6 +179,16 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   await expect(page.getByText("8.000").first()).toBeVisible();
   await page.goto("/app/conexiones");
   await expect(page.getByText(/Últimos datos recibidos/)).toBeVisible();
+
+  // Progress: character sheet, badges unlocked by what Ana already did.
+  await page.getByRole("link", { name: "Progreso" }).first().click();
+  await expect(page).toHaveURL(/\/app\/progreso$/);
+  await expect(page.getByRole("heading", { name: "Tu progreso" })).toBeVisible();
+  await expect(page.getByText("Primer paso")).toBeVisible();
+  await expect(page.getByText("Conectado", { exact: true })).toBeVisible();
+  await expect(page.getByText("Misiones épicas: tus metas")).toBeVisible();
+  await snap(page, "02d-progress");
+  await noHorizontalScroll(page);
 });
 
 test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {

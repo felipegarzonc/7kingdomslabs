@@ -3,12 +3,15 @@ import Link from "next/link";
 import { after } from "next/server";
 import { AlertNotices } from "@/components/alert-list";
 import { fmtDate } from "@/components/format";
+import { HeroCard, QuestList } from "@/components/game";
+import { GameCelebration } from "@/components/game-celebration";
 import { HabitCard } from "@/components/habit-card";
 import { Card, LinkButton, Notice, PageHeader } from "@/components/ui";
 import { addDays, todayInColombia } from "@/domain/habits";
 import { deviceSummary } from "@/domain/wearables";
 import { pilotWeek } from "@/domain/pilot";
 import { requireParticipant } from "@/lib/auth";
+import { loadGame } from "@/lib/data/game";
 import { loadHabits } from "@/lib/data/habits";
 import type { ReportContent } from "@/lib/llm/report";
 import { syncStrava } from "@/lib/strava";
@@ -36,7 +39,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const supabase = await createClient();
   const week = p.pilot_start ? pilotWeek(p.pilot_start) : 1;
   const today = todayInColombia();
-  const [habits, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs, reportRes, docsRes, connsRes, deviceRes] = await Promise.all([
+  const [game, habits, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs, reportRes, docsRes, connsRes, deviceRes] = await Promise.all([
+    loadGame(supabase, p.id),
     loadHabits(supabase, p.id),
     supabase.from("checkins").select("id").eq("participant_id", p.id).eq("week", week).maybeSingle(),
     supabase.from("checkin_replies").select("final_text, sent_at").eq("participant_id", p.id).eq("status", "sent").order("sent_at", { ascending: false }).limit(1).maybeSingle(),
@@ -63,6 +67,8 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     <>
       <PageHeader title="Hoy" subtitle={<span className="capitalize">{LONG_DATE.format(new Date())}</span>} />
       <div className="flex flex-col gap-4">
+        <GameCelebration xp={game.xp} level={game.level} title={game.title} achievements={game.achievements.filter((a) => a.unlocked).map((a) => a.title)} />
+        <HeroCard game={game} />
         <AlertNotices alerts={(alertsRes.data ?? []).map((a) => ({ level: a.level, message: a.message }))} />
         {plan === "nuevo" ? <Notice tone="good" title="Tu plan está listo">Empieza hoy con estos hábitos. Son pequeños a propósito: lo importante es no fallar dos días seguidos.</Notice> : null}
 
@@ -103,6 +109,20 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
           </Card>
         )}
 
+
+        {active.length ? (
+          <Card
+            title="Misiones de la semana"
+            action={
+              <Link href="/app/progreso" className="text-sm font-medium text-accent">
+                Ver mi progreso
+              </Link>
+            }
+          >
+            <QuestList quests={game.quests} />
+            <p className="mt-3 text-xs text-muted">Se renuevan cada lunes: cada semana es un nuevo comienzo.</p>
+          </Card>
+        ) : null}
 
         {conns.length ? (
           devices ? (

@@ -69,6 +69,8 @@ test("public pages render and protected routes redirect to login", async ({ page
   await expect(page.getByRole("link", { name: "Quiero participar" }).first()).toHaveAttribute("href", /^mailto:/);
   await snap(page, "00-landing");
   await noHorizontalScroll(page);
+  await page.goto("/inicio");
+  await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
   await page.getByRole("link", { name: "Entrar", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/app");
@@ -132,6 +134,10 @@ test("lifestyle questionnaire → personalised habit plan → logging today", as
 
 test("Apple Health link: data arrives on its own and logs the strength habit", async ({ page }) => {
   await login(page, ANA);
+  // The landing stays reachable when signed in.
+  await page.goto("/inicio");
+  await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ir a mi cuenta" })).toBeVisible();
   await page.goto("/app");
   await page.getByRole("link", { name: "Conectar mis dispositivos" }).click();
   await expect(page).toHaveURL(/\/app\/conexiones$/);

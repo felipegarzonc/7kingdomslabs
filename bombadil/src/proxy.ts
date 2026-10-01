@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Device webhooks authenticate themselves (Strava verify token, personal upload link).
-const PUBLIC_PATHS = ["/login", "/auth", "/privacidad", "/consentimiento", "/estado", "/api/strava/webhook", "/api/ingest"];
+const PUBLIC_PATHS = ["/inicio", "/login", "/auth", "/privacidad", "/consentimiento", "/estado", "/api/strava/webhook", "/api/ingest"];
 
 /** Refreshes the Supabase session cookie and keeps signed-out users out of the app. */
 export async function proxy(request: NextRequest) {

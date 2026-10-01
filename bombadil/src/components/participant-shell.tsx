@@ -19,7 +19,7 @@ export function ParticipantShell({ children, links, game }: { children: React.Re
             <span className="font-serif text-2xl font-bold">Bombadil</span>
           </Link>
           <form action="/auth/signout" method="post" className="md:hidden">
-            <button className="rounded-lg px-2 py-1 text-sm font-bold text-muted hover:bg-surface-2">Salir</button>
+            <button className="min-h-11 rounded-lg px-3 text-sm font-bold text-muted hover:bg-surface-2">Salir</button>
           </form>
         </div>
         <SideNav links={links} />

@@ -31,7 +31,7 @@ export default async function CheckinPage() {
         <div className="flex flex-col gap-3">
           <AlertNotices alerts={alerts ?? []} />
           <Notice tone="good">
-            Recibimos tu check-in de esta semana ({fmtDate(current.submitted_at)}). Tendrás una respuesta del equipo pronto. ¡Nos vemos la próxima!
+            Recibimos tu check-in de esta semana ({fmtDate(current.submitted_at)}). Tu respuesta aparece abajo y en Hoy en uno o dos minutos. ¡Nos vemos la próxima!
           </Notice>
         </div>
       ) : (

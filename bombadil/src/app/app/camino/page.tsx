@@ -80,7 +80,7 @@ function Node({ node, offset }: { node: PathNode; offset: number }) {
     );
   } else {
     face = (
-      <Link href={node.href ?? "/app"} className="flex size-24 items-center justify-center rounded-3xl border-[3px] border-dashed border-[#4b4aa3] bg-[#ecebf8] text-[#4b4aa3] dark:bg-[#24254a] dark:text-[#b3b4ee]">
+      <Link href={node.href ?? "/app"} aria-label={`${node.label}: ${node.detail ?? ""}`} className="flex size-24 items-center justify-center rounded-3xl border-[3px] border-dashed border-[#4b4aa3] bg-[#ecebf8] text-[#4b4aa3] dark:bg-[#24254a] dark:text-[#b3b4ee]">
         <Icon name="heartPulse" size={44} strokeWidth={2} />
       </Link>
     );

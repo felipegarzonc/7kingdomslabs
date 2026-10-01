@@ -173,7 +173,7 @@ export async function submitCheckin(_prev: ActionState, form: FormData): Promise
   revalidatePath("/app", "layout");
   return {
     ok: true,
-    message: "¡Listo! Recibimos tu check-in. Tendrás una respuesta del equipo pronto.",
+    message: "¡Listo! Recibimos tu check-in. Tu respuesta llega en uno o dos minutos.",
     alerts: triggered.filter((t) => t.level !== "next_visit").map((t) => ({ level: t.level, message: t.message })),
   };
 }

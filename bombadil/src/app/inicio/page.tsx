@@ -5,9 +5,10 @@ import { getViewer } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: "Bombadil · Longevidad sin humo" },
-  description: "Tus exámenes, tu reloj y hábitos pequeños que suben de nivel: un plan diario, basado en evidencia, para vivir más y mejor.",
+  title: { absolute: "Entiende tus exámenes de sangre y mejora tu salud | Bombadil" },
   alternates: { canonical: "/" },
+  // Same page as "/": only the canonical URL should be indexed.
+  robots: { index: false, follow: true },
 };
 
 /** The landing page even when signed in, to review or share it. */

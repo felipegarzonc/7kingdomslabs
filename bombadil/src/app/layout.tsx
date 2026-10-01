@@ -1,9 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bombadil-three.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
+  applicationName: "Bombadil",
   title: { default: "Bombadil", template: "%s · Bombadil" },
-  description: "Longevidad sin humo: tus exámenes y hábitos, en una sola línea de tiempo.",
+  description: "Entiende tus exámenes de sangre y mejora tu salud con hábitos pequeños, basados en evidencia.",
+  openGraph: { type: "website", locale: "es_CO", siteName: "Bombadil" },
+  twitter: { card: "summary_large_image" },
   // New file names on each logo change: browsers cache favicons for a long time.
   icons: {
     icon: [

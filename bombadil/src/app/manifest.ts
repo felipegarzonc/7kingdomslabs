@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Bombadil",
     short_name: "Bombadil",
-    description: "Longevidad sin humo: hábitos pequeños, exámenes explicados.",
+    description: "Entiende tus exámenes y mejora tu salud, un hábito a la vez.",
     start_url: "/app",
     display: "standalone",
     background_color: "#f6f7fb",

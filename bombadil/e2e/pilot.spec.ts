@@ -65,17 +65,25 @@ async function noHorizontalScroll(page: Page) {
 
 test("public pages render and protected routes redirect to login", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Entiende tus exámenes/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Quiero participar" }).first()).toHaveAttribute("href", /^mailto:/);
+  // SEO: one h1, a canonical URL, a description and structured data (FAQ) for search engines.
+  await expect(page.locator("h1")).toHaveCount(1);
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /^https?:\/\/[^/]+\/?$/);
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /colesterol/);
+  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? "[]");
+  expect(ld.find((x: { "@type": string }) => x["@type"] === "FAQPage").mainEntity.length).toBeGreaterThan(4);
+  expect((await page.request.get("/robots.txt")).status()).toBe(200);
+  expect(await (await page.request.get("/sitemap.xml")).text()).toContain("<urlset");
   await snap(page, "00-landing");
   await noHorizontalScroll(page);
   await page.goto("/inicio");
-  await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Entiende tus exámenes/ })).toBeVisible();
   await page.getByRole("link", { name: "Entrar", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login/);
-  await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entra a Bombadil" })).toBeVisible();
   await snap(page, "01-login");
   await noHorizontalScroll(page);
   await page.goto("/privacidad");
@@ -143,7 +151,7 @@ test("Apple Health link: data arrives on its own and logs the strength habit", a
   await login(page, ANA);
   // The landing stays reachable when signed in.
   await page.goto("/inicio");
-  await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Entiende tus exámenes/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Ir a mi cuenta" })).toBeVisible();
   await page.goto("/app");
   await page.getByRole("link", { name: /Usas Strava, Garmin o Apple Watch/ }).click();

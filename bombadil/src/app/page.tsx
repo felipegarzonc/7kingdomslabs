@@ -5,10 +5,17 @@ import { getViewer } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+const TITLE = "Entiende tus exámenes de sangre y mejora tu salud | Bombadil";
+const DESCRIPTION =
+  "Sube tus exámenes y entiende tu colesterol, glucosa, triglicéridos e hígado en palabras simples. Recibe 3 hábitos pequeños para mejorarlos y mide tu avance. Colombia.";
+
 export const metadata: Metadata = {
-  title: { absolute: "Bombadil · Longevidad sin humo" },
-  description: "Tus exámenes, tu reloj y hábitos pequeños que suben de nivel: un plan diario, basado en evidencia, para vivir más y mejor.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
+  alternates: { canonical: "/" },
   robots: { index: true, follow: true },
+  openGraph: { title: TITLE, description: DESCRIPTION, url: "/" },
+  twitter: { title: TITLE, description: DESCRIPTION },
 };
 
 export default async function Home() {

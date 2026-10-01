@@ -11,49 +11,127 @@ const JOIN = `mailto:${OPERATOR.email}?subject=${encodeURIComponent("Quiero part
 const LIFT = "transition duration-200 hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0";
 
 // ─── Content ────────────────────────────────────────────────────────────────
+// Who this is for (see docs/CLIENTE.md): people 35–55 in Colombia who got a lab result with something
+// "alto" and a short appointment, want to stay strong for decades, and often already wear a watch.
+// The copy leads with that problem and its outcome; the game is how the habits stick, not the promise.
+
+const PAINS: Array<{ icon: IconName; title: string; body: string }> = [
+  {
+    icon: "flask",
+    title: "El examen dice «alto» y nadie te lo explica",
+    body: "Un PDF con 30 valores, tres en rojo y una consulta de 15 minutos que termina en «baje de peso y haga ejercicio».",
+  },
+  {
+    icon: "calendar",
+    title: "Cada año empiezas de cero",
+    body: "Tus resultados quedan en correos y laboratorios distintos. Nadie mira si tu colesterol viene subiendo desde hace tres años.",
+  },
+  {
+    icon: "target",
+    title: "El plan dura dos semanas",
+    body: "Dieta estricta, gimnasio cinco días… y en marzo todo vuelve a ser igual. No es falta de voluntad: el plan era demasiado grande.",
+  },
+];
 
 const STEPS: Array<{ n: string; title: string; body: string; icon: IconName; tile: string }> = [
   {
     n: "1",
-    title: "Cuéntanos cómo vives",
-    body: "Ocho preguntas de un toque sobre movimiento, sueño, comida, alcohol y estrés. Dos minutos.",
-    icon: "compass",
+    title: "Sube tus exámenes",
+    body: "El PDF de cualquier laboratorio y de cualquier año. En un par de minutos ves qué significa cada valor y cuáles importan.",
+    icon: "flask",
     tile: "bg-accent text-white",
   },
   {
     n: "2",
-    title: "Trae tus datos",
-    body: "Sube tus exámenes y conecta tu reloj. Nada de digitar valores: Bombadil los lee por ti.",
-    icon: "flask",
+    title: "Recibe tres hábitos a tu medida",
+    body: "Ocho preguntas sobre cómo vives y armamos tres hábitos pequeños, anclados a tu rutina, para los valores que más pesan.",
+    icon: "compass",
     tile: "bg-gold text-[#1b2433]",
   },
   {
     n: "3",
-    title: "Juega tu día",
-    body: "Tres hábitos pequeños anclados a tu rutina. Si se vuelven fáciles, suben; si cuestan, se encogen.",
-    icon: "swords",
+    title: "Mide si funcionó",
+    body: "Tu reloj y tus registros muestran el avance semana a semana, y tu próximo examen lo confirma con números.",
+    icon: "trophy",
     tile: "bg-[#2f9e6e] text-white",
   },
 ];
 
+const AUDIENCES: Array<{ icon: IconName; title: string; body: string; tags: string[] }> = [
+  {
+    icon: "heartPulse",
+    title: "Te salió algo alterado",
+    body: "Quieres entender qué significa y bajarlo con hábitos que puedas sostener, de la mano de tu médico.",
+    tags: ["Colesterol LDL", "Triglicéridos", "Glucosa", "Hígado graso", "Presión arterial"],
+  },
+  {
+    icon: "sprout",
+    title: "Quieres llegar a los 80 con energía",
+    body: "Nada te duele, pero quieres prevenir: fuerza, corazón y sueño que te den décadas de buena vida.",
+    tags: ["Prevención", "Longevidad", "Fuerza", "Sueño"],
+  },
+  {
+    icon: "watch",
+    title: "Ya mides todo",
+    body: "Tienes reloj, Strava y exámenes anuales. Te falta que esos datos se conviertan en decisiones de cada semana.",
+    tags: ["VO2máx", "Strava", "Apple Salud", "Garmin"],
+  },
+];
+
 const ATTRS: Array<{ label: string; icon: IconName; blurb: string; tone: string; chip: string }> = [
-  { label: "Resistencia", icon: "movimiento", blurb: "Corazón y pulmones en forma", tone: "bg-accent-soft text-accent-strong", chip: "bg-accent text-white" },
-  { label: "Fuerza", icon: "fuerza", blurb: "Músculo para tus 80", tone: "bg-[#fde7dc] text-[#9a3b12]", chip: "bg-[#e8693a] text-white" },
-  { label: "Descanso", icon: "sueno", blurb: "Siete a ocho horas", tone: "bg-info-soft text-info", chip: "bg-info text-white" },
-  { label: "Nutrición", icon: "nutricion", blurb: "Más plantas, menos ultraprocesados", tone: "bg-[#e0f3e8] text-[#1d6b47]", chip: "bg-[#2f9e6e] text-white" },
-  { label: "Calma", icon: "estres", blurb: "Estrés bajo control", tone: "bg-[#dcf1f4] text-[#14606b]", chip: "bg-[#1f8a99] text-white" },
-  { label: "Vínculos", icon: "conexion", blurb: "Gente que te cuida", tone: "bg-[#fbe3ec] text-[#8f2453]", chip: "bg-[#d0457f] text-white" },
-  { label: "Templanza", icon: "sustancias", blurb: "Menos alcohol, cero humo", tone: "bg-gold-soft text-[#7a5a0c]", chip: "bg-gold text-[#1b2433]" },
-  { label: "Sabiduría", icon: "sabiduria", blurb: "Conocerte con datos", tone: "bg-surface-2 text-text", chip: "bg-[#1b2433] text-white" },
+  { label: "Resistencia", icon: "movimiento", blurb: "Capacidad cardiorrespiratoria (VO2máx)", tone: "bg-accent-soft text-accent-strong", chip: "bg-accent text-white" },
+  { label: "Fuerza", icon: "fuerza", blurb: "Músculo y fuerza de agarre", tone: "bg-[#fde7dc] text-[#9a3b12]", chip: "bg-[#e8693a] text-white" },
+  { label: "Descanso", icon: "sueno", blurb: "Siete a ocho horas de sueño", tone: "bg-info-soft text-info", chip: "bg-info text-white" },
+  { label: "Nutrición", icon: "nutricion", blurb: "Fibra, proteína, menos ultraprocesados", tone: "bg-[#e0f3e8] text-[#1d6b47]", chip: "bg-[#2f9e6e] text-white" },
+  { label: "Calma", icon: "estres", blurb: "Estrés y presión arterial", tone: "bg-[#dcf1f4] text-[#14606b]", chip: "bg-[#1f8a99] text-white" },
+  { label: "Vínculos", icon: "conexion", blurb: "Relaciones que te sostienen", tone: "bg-[#fbe3ec] text-[#8f2453]", chip: "bg-[#d0457f] text-white" },
+  { label: "Templanza", icon: "sustancias", blurb: "Poco alcohol, nada de tabaco", tone: "bg-gold-soft text-[#7a5a0c]", chip: "bg-gold text-[#1b2433]" },
+  { label: "Sabiduría", icon: "sabiduria", blurb: "Conocer tus números", tone: "bg-surface-2 text-text", chip: "bg-[#1b2433] text-white" },
 ];
 
 const TITLES = ["Aprendiz del bosque", "Caminante", "Explorador", "Rastreador", "Guardián del sendero", "Custodio del bosque", "Sabio del bosque", "Leyenda de la longevidad"];
 
 const DEVICES = ["Strava", "Apple Salud", "Garmin", "Apple Watch", "Polar", "Coros", "Suunto"];
 
-const LEVERS = ["Capacidad cardiorrespiratoria", "Fuerza muscular", "Sueño de 7 a 8 horas", "Presión arterial", "ApoB y colesterol", "Glucosa e hígado", "No fumar", "Poco alcohol"];
+const LEVERS = ["Capacidad cardiorrespiratoria", "Fuerza muscular", "Sueño de 7 a 8 horas", "Presión arterial", "ApoB y colesterol LDL", "Glucosa e hígado", "No fumar", "Poco alcohol"];
 
-const MYTHS = ["Suplementos milagro", "“Edad biológica” mágica", "Dietas de moda"];
+const MYTHS = ["Suplementos milagro", "Tests de «edad biológica»", "Dietas de moda"];
+
+/** Real questions people search for; answered here and marked up as FAQPage. */
+export const FAQ: Array<{ q: string; a: string }> = [
+  {
+    q: "¿Cómo interpretar mis exámenes de sangre?",
+    a: "Cada valor se compara con el rango de referencia de tu laboratorio y, cuando hay evidencia, con un rango óptimo para la salud a largo plazo. Igual de importante es la tendencia: un colesterol LDL que sube año tras año dice más que un solo resultado. Bombadil lee el PDF, te explica cada valor en palabras simples, conecta los que se relacionan (por ejemplo, triglicéridos, glucosa e hígado) y te dice qué conviene hablar con tu médico.",
+  },
+  {
+    q: "¿Qué hago si tengo el colesterol LDL o los triglicéridos altos?",
+    a: "Primero, hablarlo con tu médico: si necesitas medicamento depende de tu riesgo total (edad, presión, glucosa, tabaco y antecedentes). En hábitos, lo que más ayuda al LDL es comer menos grasa saturada y ultraprocesados y más fibra soluble (avena, fríjoles, lentejas). Los triglicéridos responden sobre todo a menos alcohol, azúcar y harinas refinadas, y a más actividad física. Bombadil convierte eso en hábitos pequeños y mide si tu próximo examen mejora.",
+  },
+  {
+    q: "¿Una glucosa en ayunas entre 100 y 125 mg/dL es prediabetes?",
+    a: "Según la Asociación Americana de Diabetes, una glucosa en ayunas de 100 a 125 mg/dL o una hemoglobina glicosilada (HbA1c) de 5,7 % a 6,4 % corresponden a prediabetes. Desde 126 mg/dL en ayunas o 6,5 % de HbA1c, confirmados en una segunda prueba, se habla de diabetes. La prediabetes se puede revertir: moverte más, dormir mejor y bajar un poco de peso reducen mucho el riesgo.",
+  },
+  {
+    q: "¿Qué es la longevidad y qué la mejora de verdad?",
+    a: "Longevidad no es solo vivir más años, sino vivirlos con energía, fuerza y la cabeza clara. Lo que más evidencia tiene: buena capacidad cardiorrespiratoria (VO2máx), fuerza muscular, dormir de 7 a 8 horas, presión arterial, colesterol y glucosa en rango, no fumar y poco alcohol. Bombadil trabaja esas palancas, sin suplementos milagro ni tests de «edad biológica».",
+  },
+  {
+    q: "¿Bombadil reemplaza a mi médico?",
+    a: "No. Es acompañamiento y educación en salud: no diagnostica ni receta. Te ayuda a llegar a la consulta entendiendo tus resultados, con un resumen de una página para tu médico, y te avisa con reglas clínicas fijas cuando un valor merece consultar pronto.",
+  },
+  {
+    q: "¿Funciona con mi reloj?",
+    a: "Sí. Se conecta con Strava y Apple Salud; Garmin, Polar, Coros y Suunto llegan a través de Strava. Tus pasos, sueño, ejercicio y frecuencia cardiaca se registran solos, y los hábitos de movimiento y fuerza se marcan sin que hagas nada.",
+  },
+  {
+    q: "¿Qué pasa con mis datos de salud?",
+    a: "Los tratamos solo con tu autorización expresa, según la Ley 1581 de 2012. Antes de analizar un examen ocultamos tu nombre y documento. Puedes descargar o borrar todos tus datos cuando quieras.",
+  },
+  {
+    q: "¿Cómo empiezo?",
+    a: "Estamos abriendo cupos de un piloto en Colombia. Escríbenos desde el botón «Quiero participar» y te contamos los pasos.",
+  },
+];
 
 // ─── Small pieces ───────────────────────────────────────────────────────────
 
@@ -74,16 +152,6 @@ function Ring({ value, size = 64, children }: { value: number; size?: number; ch
 
 function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return <p className={cx("text-xs font-black tracking-[0.14em] uppercase", className)}>{children}</p>;
-}
-
-function SectionTitle({ eyebrow, title, body, light = false }: { eyebrow: string; title: ReactNode; body?: ReactNode; light?: boolean }) {
-  return (
-    <div className="max-w-2xl">
-      <Eyebrow className={light ? "text-gold" : "text-accent"}>{eyebrow}</Eyebrow>
-      <h2 className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">{title}</h2>
-      {body ? <p className={cx("mt-3 text-base font-semibold sm:text-lg", light ? "text-white/80" : "text-muted")}>{body}</p> : null}
-    </div>
-  );
 }
 
 /** Hand-drawn gold underline under the hero's key words. */
@@ -234,21 +302,21 @@ function CaminoSection() {
       <div>
         <Eyebrow className="text-accent">El camino</Eyebrow>
         <h2 id="camino" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
-          Cada hábito es un camino. Tú lo recorres a tu ritmo.
+          Progreso semana a semana, con una prueba real al final.
         </h2>
-        <p className="mt-3 text-lg font-semibold text-muted">Semanas con hitos, cofres y un siguiente nivel. Al final, una prueba real que mide si cambiaste de verdad.</p>
+        <p className="mt-3 text-lg font-semibold text-muted">Cada hábito crece cuando se vuelve fácil y se encoge cuando cuesta. Al final, un dato objetivo dice si cambiaste de verdad.</p>
         <ul className="mt-8 flex flex-col gap-3">
           {[
             { icon: "steps" as const, title: "Semana a semana", body: "Caminar 15 minutos hoy, 25 en un mes. Nunca un salto que asuste." },
-            { icon: "chest" as const, title: "Hitos con premio", body: "Cofres de XP y medallas cuando sostienes el hábito." },
-            { icon: "trophy" as const, title: "La prueba final", body: "Por ejemplo, medir tu VO2máx y ver cuánto subió." },
+            { icon: "chest" as const, title: "Hitos con premio", body: "Medallas y escudos para tu racha cuando sostienes el hábito." },
+            { icon: "trophy" as const, title: "La prueba final", body: "Tu próximo examen, tu VO2máx o tu presión: números que puedes comparar." },
           ].map((f) => (
             <li key={f.title} className="flex gap-4 rounded-2xl border-2 border-border bg-surface p-4">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
                 <Icon name={f.icon} size={22} />
               </span>
               <div>
-                <p className="font-black">{f.title}</p>
+                <h3 className="font-black">{f.title}</h3>
                 <p className="text-sm font-semibold text-muted">{f.body}</p>
               </div>
             </li>
@@ -322,23 +390,56 @@ function ExamMock() {
 
 // ─── Page ───────────────────────────────────────────────────────────────────
 
+function JsonLd() {
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bombadil-three.vercel.app";
+  const data = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "Bombadil",
+      url: site,
+      logo: `${site}/bombadil-icon-192.png`,
+      email: OPERATOR.email,
+      areaServed: "CO",
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Bombadil",
+      inLanguage: "es-CO",
+      url: site,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      inLanguage: "es-CO",
+      mainEntity: FAQ.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+    },
+  ];
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }} />;
+}
+
+const NAV = [
+  { href: "#como-funciona", label: "Cómo funciona" },
+  { href: "#examenes", label: "Exámenes" },
+  { href: "#para-quien", label: "Para quién es" },
+  { href: "#preguntas", label: "Preguntas" },
+];
+
 /** Public landing page, shown at / to visitors and at /inicio to anyone. */
 export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <div className="min-h-dvh overflow-x-clip bg-bg">
+      <JsonLd />
       <header className="sticky top-0 z-30 border-b-2 border-border/70 bg-bg/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <Brand />
-          <nav className="flex items-center gap-2">
-            <a href="#como-funciona" className="hidden rounded-xl px-3 py-2 text-sm font-extrabold text-muted hover:bg-surface-2 hover:text-text md:inline-flex">
-              Cómo funciona
-            </a>
-            <a href="#atributos" className="hidden rounded-xl px-3 py-2 text-sm font-extrabold text-muted hover:bg-surface-2 hover:text-text md:inline-flex">
-              Atributos
-            </a>
-            <a href="#examenes" className="hidden rounded-xl px-3 py-2 text-sm font-extrabold text-muted hover:bg-surface-2 hover:text-text md:inline-flex">
-              Exámenes
-            </a>
+          <nav aria-label="Secciones" className="flex items-center gap-2">
+            {NAV.map((n) => (
+              <a key={n.href} href={n.href} className="hidden rounded-xl px-3 py-2 text-sm font-extrabold text-muted hover:bg-surface-2 hover:text-text lg:inline-flex">
+                {n.label}
+              </a>
+            ))}
             <LinkButton href={signedIn ? "/" : "/login"} variant="secondary" className="min-h-10">
               {signedIn ? "Ir a mi cuenta" : "Entrar"}
             </LinkButton>
@@ -351,13 +452,14 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-14 px-4 pt-10 pb-20 md:grid-cols-[1.05fr_1fr] md:gap-10 md:pt-20 md:pb-28">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border-2 border-gold/50 bg-gold-soft px-3 py-1 text-xs font-black text-[#7a5a0c]">
-              <span className="size-2 rounded-full bg-gold" aria-hidden /> Piloto por invitación · Colombia
+              <span className="size-2 rounded-full bg-gold" aria-hidden /> Salud preventiva con evidencia · Colombia
             </p>
-            <h1 className="mt-5 font-serif text-5xl leading-[1.02] font-bold tracking-tight sm:text-6xl lg:text-7xl">
-              Longevidad <span className="relative inline-block text-accent">sin humo.<Squiggle /></span>
+            <h1 className="mt-5 font-serif text-[2.6rem] leading-[1.05] font-bold tracking-tight text-balance sm:text-6xl">
+              Entiende tus exámenes y mejora tu salud, <span className="relative inline-block text-accent">un hábito a la vez.<Squiggle /></span>
             </h1>
             <p className="mt-6 max-w-xl text-lg font-semibold text-muted sm:text-xl">
-              Hábitos pequeños, tus exámenes explicados y tu reloj trabajando por ti. Un juego diario, con evidencia, para vivir más años y con más energía.
+              Sube tus exámenes de sangre y entiende en minutos tu colesterol, glucosa, triglicéridos e hígado. Luego, tres hábitos pequeños para mejorarlos, y tu próximo examen te dirá si
+              funcionó.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <a href={JOIN} className={buttonClass("primary", "min-h-13 px-7 text-base")}>
@@ -381,10 +483,10 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <section aria-label="Lo esencial" className="border-y-2 border-accent-strong bg-accent text-white">
           <ul className="mx-auto grid max-w-6xl grid-cols-2 gap-x-4 gap-y-3 px-4 py-5 text-sm font-black sm:text-base md:grid-cols-4">
             {[
-              { icon: "target" as const, text: "3 hábitos al día" },
-              { icon: "check" as const, text: "Un toque: Lo hice" },
-              { icon: "watch" as const, text: "Tu reloj marca por ti" },
-              { icon: "flask" as const, text: "Solo evidencia" },
+              { icon: "flask" as const, text: "Exámenes en palabras simples" },
+              { icon: "target" as const, text: "3 hábitos, no 30" },
+              { icon: "watch" as const, text: "Tu reloj registra por ti" },
+              { icon: "heartPulse" as const, text: "Un resumen para tu médico" },
             ].map((p) => (
               <li key={p.text} className="flex items-center gap-2">
                 <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-white/15 text-gold">
@@ -396,36 +498,104 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           </ul>
         </section>
 
-        {/* ── How it works ── */}
-        <section id="como-funciona" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 md:py-28">
-          <SectionTitle eyebrow="Cómo funciona" title="Tres pasos y estás jugando." body="Sin planes eternos ni metas imposibles. Empiezas pequeño y Bombadil ajusta contigo." />
-          <ol className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <li key={s.n} className={cx("relative rounded-[1.75rem] border-2 border-border border-b-[6px] bg-surface p-6", LIFT)}>
-                <span className="absolute top-5 right-6 font-serif text-6xl leading-none font-bold text-surface-2" aria-hidden>
-                  {s.n}
+        {/* ── The problem ── */}
+        <section aria-labelledby="problema" className="mx-auto max-w-6xl px-4 py-20 md:py-28">
+          <div className="max-w-2xl">
+            <Eyebrow className="text-accent">¿Te suena?</Eyebrow>
+            <h2 id="problema" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
+              Tienes los exámenes. Te falta saber qué hacer con ellos.
+            </h2>
+          </div>
+          <ul className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {PAINS.map((p) => (
+              <li key={p.title} className="rounded-[1.75rem] border-2 border-border bg-surface p-6">
+                <span className="flex size-12 items-center justify-center rounded-2xl bg-surface-2 text-muted">
+                  <Icon name={p.icon} size={24} />
                 </span>
-                <span className={cx("relative flex size-14 items-center justify-center rounded-2xl border-b-4 border-black/20", s.tile)}>
-                  <Icon name={s.icon} size={28} strokeWidth={2.4} />
-                </span>
-                <p className="relative mt-5 text-xl font-black">
-                  <span className="sr-only">Paso {s.n}: </span>
-                  {s.title}
-                </p>
-                <p className="relative mt-2 font-semibold text-muted">{s.body}</p>
+                <h3 className="mt-4 text-xl font-black">{p.title}</h3>
+                <p className="mt-2 font-semibold text-muted">{p.body}</p>
               </li>
             ))}
-          </ol>
+          </ul>
+        </section>
+
+        {/* ── How it works ── */}
+        <section id="como-funciona" aria-labelledby="como-funciona-title" className="scroll-mt-20 bg-surface py-20 md:py-28">
+          <div className="mx-auto max-w-6xl px-4">
+            <div className="max-w-2xl">
+              <Eyebrow className="text-accent">Cómo funciona</Eyebrow>
+              <h2 id="como-funciona-title" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
+                De un PDF que no entiendes a números que mejoran.
+              </h2>
+              <p className="mt-3 text-base font-semibold text-muted sm:text-lg">Sin planes eternos ni metas imposibles. Empiezas pequeño y Bombadil ajusta contigo cada semana.</p>
+            </div>
+            <ol className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+              {STEPS.map((s) => (
+                <li key={s.n} className={cx("relative rounded-[1.75rem] border-2 border-border border-b-[6px] bg-bg p-6", LIFT)}>
+                  <span className="absolute top-5 right-6 font-serif text-6xl leading-none font-bold text-surface-2" aria-hidden>
+                    {s.n}
+                  </span>
+                  <span className={cx("relative flex size-14 items-center justify-center rounded-2xl border-b-4 border-black/20", s.tile)}>
+                    <Icon name={s.icon} size={28} strokeWidth={2.4} />
+                  </span>
+                  <h3 className="relative mt-5 text-xl font-black">
+                    <span className="sr-only">Paso {s.n}: </span>
+                    {s.title}
+                  </h3>
+                  <p className="relative mt-2 font-semibold text-muted">{s.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── Exams ── */}
+        <section id="examenes" aria-labelledby="examenes-title" className="mx-auto grid max-w-6xl scroll-mt-20 grid-cols-1 items-center gap-14 px-4 py-20 md:grid-cols-2 md:py-28">
+          <div className="md:order-2">
+            <Eyebrow className="text-accent">Exámenes explicados</Eyebrow>
+            <h2 id="examenes-title" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
+              Interpreta tus exámenes de sangre en palabras simples.
+            </h2>
+            <p className="mt-3 text-base font-semibold text-muted sm:text-lg">Sube el PDF de cualquier laboratorio y de cualquier año. Bombadil te dice qué significa cada valor, cómo ha cambiado y qué hacer.</p>
+            <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {[
+                { icon: "heartPulse" as const, title: "Perfil lipídico", body: "Colesterol LDL y HDL, triglicéridos, ApoB y Lp(a)." },
+                { icon: "flask" as const, title: "Glucosa y HbA1c", body: "Si estás en rango, en prediabetes o necesitas consultar." },
+                { icon: "nutricion" as const, title: "Hígado y riñón", body: "ALT, AST, hígado graso (FIB-4), creatinina y más." },
+                { icon: "user" as const, title: "Imágenes", body: "Resonancias, ecografías y radiografías, explicadas." },
+                { icon: "calendar" as const, title: "Tu historia", body: "Cada valor a lo largo de los años, de todos tus laboratorios." },
+                { icon: "lock" as const, title: "Alertas seguras", body: "Valores peligrosos con reglas clínicas fijas, nunca con IA." },
+              ].map((f) => (
+                <li key={f.title} className="rounded-2xl border-2 border-border bg-surface p-4">
+                  <Icon name={f.icon} size={22} className="text-accent" />
+                  <h3 className="mt-2 font-black">{f.title}</h3>
+                  <p className="text-sm font-semibold text-muted">{f.body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="md:order-1">
+            <ExamMock />
+          </div>
         </section>
 
         {/* ── The daily game: bento ── */}
-        <section className="bg-surface py-20 md:py-28">
+        <section aria-labelledby="habitos" className="bg-surface py-20 md:py-28">
           <div className="mx-auto max-w-6xl px-4">
-            <SectionTitle eyebrow="Tu día" title="Constancia que se siente como un juego." body="Recompensamos que aparezcas, no los resultados de tus exámenes. Y un mal día no borra tu progreso." />
+            <div className="max-w-2xl">
+              <Eyebrow className="text-accent">Hábitos que se sostienen</Eyebrow>
+              <h2 id="habitos" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
+                Pequeños, anclados a tu rutina y con un toque de juego.
+              </h2>
+              <p className="mt-3 text-base font-semibold text-muted sm:text-lg">
+                Usamos lo que la ciencia del comportamiento sabe sobre crear hábitos: empezar pequeño, pegarlo a algo que ya haces y premiar la constancia, no los resultados. Un mal día no
+                borra tu progreso.
+              </p>
+            </div>
             <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-6">
               {/* Anchors */}
               <div className={cx("rounded-[1.75rem] bg-accent p-6 text-white md:col-span-4", LIFT)}>
-                <p className="text-xl font-black">Anclados a tu rutina</p>
+                <h3 className="text-xl font-black">Anclados a tu rutina</h3>
                 <p className="mt-1 font-semibold text-white/80">Cada hábito vive pegado a algo que ya haces. Y si el día se complica, existe la versión mínima.</p>
                 <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl bg-white p-4 text-text">
@@ -446,8 +616,8 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
                     <Icon name="check" size={26} strokeWidth={3.2} />
                   </span>
                 </Ring>
-                <p className="mt-4 text-xl font-black">El anillo dorado</p>
-                <p className="mt-1 text-sm font-semibold text-muted">Cierra tus tres hábitos y celebra el día.</p>
+                <h3 className="mt-4 text-xl font-black">El anillo del día</h3>
+                <p className="mt-1 text-sm font-semibold text-muted">Cierra tus hábitos con un toque. Si tu reloj ya lo registró, se marca solo.</p>
               </div>
 
               {/* Streak */}
@@ -457,42 +627,33 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
                   <Shield size={32} />
                   <Shield size={32} />
                 </div>
-                <p className="mt-4 text-xl font-black">Rachas con escudos</p>
-                <p className="mt-1 text-sm font-semibold text-muted">Cada 7 días ganas un escudo que cubre un día perdido. Ganado, nunca comprado.</p>
+                <h3 className="mt-4 text-xl font-black">Rachas con escudos</h3>
+                <p className="mt-1 text-sm font-semibold text-muted">Cada 7 días ganas un escudo que cubre un día perdido. Lo que importa es no fallar dos seguidos.</p>
               </div>
 
-              {/* Quests */}
+              {/* Reminders */}
               <div className={cx("rounded-[1.75rem] border-2 border-border bg-bg p-6 md:col-span-2", LIFT)}>
-                <p className="text-xl font-black">Misiones semanales</p>
-                <p className="mt-1 text-sm font-semibold text-muted">Se renuevan cada lunes.</p>
-                <ul className="mt-4 flex flex-col gap-3">
-                  {[
-                    { t: "Cierra el anillo 4 días", p: 75 },
-                    { t: "Haz tu revisión semanal", p: 100 },
-                  ].map((q) => (
-                    <li key={q.t}>
-                      <p className="text-sm font-black">{q.t}</p>
-                      <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-surface-2">
-                        <div className={cx("h-full rounded-full", q.p === 100 ? "bg-gold" : "bg-accent")} style={{ width: `${q.p}%` }} />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent">
+                  <Icon name="bell" size={24} />
+                </span>
+                <h3 className="mt-4 text-xl font-black">Recordatorios a tu hora</h3>
+                <p className="mt-1 text-sm font-semibold text-muted">Un aviso solo si aún no lo hiciste. Y, si quieres, alguien de confianza que te acompañe.</p>
               </div>
 
               {/* Levels */}
               <div className={cx("rounded-[1.75rem] bg-[#1b2433] p-6 text-white md:col-span-2", LIFT)}>
                 <div className="flex items-center gap-3">
                   <HatAvatar size={44} level={7} />
-                  <p className="text-xl font-black">Sube de nivel</p>
+                  <h3 className="text-xl font-black">Sube de nivel</h3>
                 </div>
+                <p className="mt-2 text-sm font-semibold text-white/70">¿Prefieres sin juego? Hay un modo sobrio.</p>
                 <ol className="mt-4 flex flex-wrap gap-1.5">
-                  {TITLES.map((t, i) => (
+                  {TITLES.slice(0, 6).map((t, i) => (
                     <li
                       key={t}
                       className={cx(
                         "rounded-full px-2.5 py-1 text-xs font-black",
-                        i < 4 ? "bg-white/10 text-white/70" : i === 4 ? "bg-gold text-[#1b2433]" : "border border-white/20 text-white/50",
+                        i < 3 ? "bg-white/10 text-white/70" : i === 3 ? "bg-gold text-[#1b2433]" : "border border-white/20 text-white/50",
                       )}
                     >
                       {t}
@@ -507,60 +668,71 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         {/* ── El camino ── */}
         <CaminoSection />
 
-        {/* ── Attributes ── */}
-        <section id="atributos" className="scroll-mt-20 bg-surface py-20 md:py-28">
+        {/* ── For whom ── */}
+        <section id="para-quien" aria-labelledby="para-quien-title" className="scroll-mt-20 bg-surface py-20 md:py-28">
           <div className="mx-auto max-w-6xl px-4">
-            <SectionTitle eyebrow="Tu personaje" title="Ocho atributos. Un personaje que eres tú." body="Cada hábito sube un atributo. Así ves, de un vistazo, en qué estás fuerte y qué merece cariño." />
-            <ul className="mt-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-              {ATTRS.map((a) => (
-                <li key={a.label} className={cx("rounded-[1.5rem] p-4 sm:p-5", a.tone, LIFT)}>
-                  <span className={cx("flex size-12 items-center justify-center rounded-2xl border-b-4 border-black/20", a.chip)}>
-                    <Icon name={a.icon} size={26} strokeWidth={2.4} />
+            <div className="max-w-2xl">
+              <Eyebrow className="text-accent">Para quién es</Eyebrow>
+              <h2 id="para-quien-title" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
+                Para quien quiere cuidarse en serio, sin volverse experto.
+              </h2>
+            </div>
+            <ul className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3">
+              {AUDIENCES.map((a) => (
+                <li key={a.title} className={cx("flex flex-col rounded-[1.75rem] border-2 border-border border-b-[6px] bg-bg p-6", LIFT)}>
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-accent text-white">
+                    <Icon name={a.icon} size={24} />
                   </span>
-                  <p className="mt-4 text-lg font-black text-text">{a.label}</p>
-                  <p className="mt-0.5 text-sm font-bold">{a.blurb}</p>
+                  <h3 className="mt-4 text-xl font-black">{a.title}</h3>
+                  <p className="mt-2 flex-1 font-semibold text-muted">{a.body}</p>
+                  <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Temas">
+                    {a.tags.map((t) => (
+                      <li key={t} className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-black text-accent-strong">
+                        {t}
+                      </li>
+                    ))}
+                  </ul>
                 </li>
               ))}
             </ul>
+            <p className="mt-6 text-sm font-semibold text-muted">
+              No es para emergencias ni para tratar una enfermedad: eso es con tu médico. Si estás en tratamiento, Bombadil te ayuda con los hábitos que él o ella te recomendó.
+            </p>
           </div>
         </section>
 
-        {/* ── Exams ── */}
-        <section id="examenes" className="mx-auto grid max-w-6xl grid-cols-1 scroll-mt-20 items-center gap-14 px-4 py-20 md:grid-cols-2 md:py-28">
-          <div className="md:order-2">
-            <SectionTitle
-              eyebrow="Exámenes explicados"
-              title="Tus exámenes, por fin en palabras simples."
-              body="Sube la foto o el PDF y Bombadil te dice qué significa y qué hacer. De cualquier año."
-            />
-            <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {[
-                { icon: "flask" as const, title: "Sangre", body: "ApoB, Lp(a), glucosa, hígado (FIB-4) y más." },
-                { icon: "user" as const, title: "Imágenes", body: "Resonancias, ecografías y radiografías." },
-                { icon: "heartPulse" as const, title: "Alertas seguras", body: "Valores peligrosos con reglas clínicas fijas, nunca con IA." },
-                { icon: "calendar" as const, title: "Tu historia", body: "Ves cómo cambia cada valor con los años." },
-              ].map((f) => (
-                <li key={f.title} className="rounded-2xl border-2 border-border bg-surface p-4">
-                  <Icon name={f.icon} size={22} className="text-accent" />
-                  <p className="mt-2 font-black">{f.title}</p>
-                  <p className="text-sm font-semibold text-muted">{f.body}</p>
-                </li>
-              ))}
-            </ul>
+        {/* ── The eight areas ── */}
+        <section id="atributos" aria-labelledby="atributos-title" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 md:py-28">
+          <div className="max-w-2xl">
+            <Eyebrow className="text-accent">Tu personaje</Eyebrow>
+            <h2 id="atributos-title" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
+              Las ocho áreas que más pesan en cuántos años vives, y cómo.
+            </h2>
+            <p className="mt-3 text-base font-semibold text-muted sm:text-lg">Cada hábito sube una de ellas. Así ves de un vistazo en qué estás fuerte y qué merece atención.</p>
           </div>
-          <div className="md:order-1">
-            <ExamMock />
-          </div>
+          <ul className="mt-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {ATTRS.map((a) => (
+              <li key={a.label} className={cx("rounded-[1.5rem] p-4 sm:p-5", a.tone, LIFT)}>
+                <span className={cx("flex size-12 items-center justify-center rounded-2xl border-b-4 border-black/20", a.chip)}>
+                  <Icon name={a.icon} size={26} strokeWidth={2.4} />
+                </span>
+                <h3 className="mt-4 text-lg font-black text-text">{a.label}</h3>
+                <p className="mt-0.5 text-sm font-bold">{a.blurb}</p>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* ── Devices ── */}
-        <section className="mx-auto max-w-6xl px-4 pb-20 md:pb-28">
+        <section aria-labelledby="dispositivos" className="mx-auto max-w-6xl px-4 pb-20 md:pb-28">
           <div className="rounded-[2rem] border-2 border-border border-b-[6px] bg-surface p-6 sm:p-10">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="max-w-md">
                 <Eyebrow className="text-accent">Dispositivos</Eyebrow>
-                <p className="mt-2 font-serif text-2xl leading-tight font-bold sm:text-3xl">Hábitos que se marcan solos.</p>
-                <p className="mt-2 font-semibold text-muted">Si tu reloj registra la caminata o las pesas, el hábito de movimiento o fuerza queda hecho. Tú solo vives.</p>
+                <h2 id="dispositivos" className="mt-2 font-serif text-2xl leading-tight font-bold sm:text-3xl">
+                  Tu reloj trabaja por ti.
+                </h2>
+                <p className="mt-2 font-semibold text-muted">Pasos, sueño, ejercicio, frecuencia cardiaca y HRV llegan solos. Si registra la caminata o las pesas, el hábito queda hecho.</p>
               </div>
               <ul className="flex flex-wrap gap-2 md:max-w-lg md:justify-end">
                 {DEVICES.map((d, i) => (
@@ -582,16 +754,17 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         </section>
 
         {/* ── Evidence ── */}
-        <section className="relative overflow-hidden bg-accent text-white">
+        <section aria-labelledby="evidencia" className="relative overflow-hidden bg-accent text-white">
           <div aria-hidden className="absolute top-10 -right-16 size-64 rounded-full border-[28px] border-white/5" />
           <div className="relative mx-auto grid max-w-6xl grid-cols-1 gap-12 px-4 py-20 md:grid-cols-[1.1fr_1fr] md:py-28">
             <div>
-              <SectionTitle
-                light
-                eyebrow="Sin humo"
-                title="Solo lo que tiene evidencia."
-                body="Trabajamos las palancas que los mejores estudios asocian con más años de vida sana. Nada más."
-              />
+              <Eyebrow className="text-gold">Basado en evidencia</Eyebrow>
+              <h2 id="evidencia" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-4xl">
+                Lo que la ciencia sí asocia con más años de vida sana.
+              </h2>
+              <p className="mt-3 text-base font-semibold text-white/80 sm:text-lg">
+                Trabajamos las palancas con mejor evidencia y medimos tu salud cardiovascular con el puntaje Life&apos;s Essential 8 de la Asociación Americana del Corazón.
+              </p>
               <ul className="mt-8 flex flex-wrap gap-2">
                 {LEVERS.map((l) => (
                   <li key={l} className="rounded-full border-2 border-b-4 border-white/25 bg-white/10 px-3.5 py-1.5 text-sm font-black">
@@ -618,8 +791,31 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           </div>
         </section>
 
+        {/* ── FAQ ── */}
+        <section id="preguntas" aria-labelledby="preguntas-title" className="mx-auto max-w-3xl scroll-mt-20 px-4 py-20 md:py-28">
+          <Eyebrow className="text-accent">Preguntas frecuentes</Eyebrow>
+          <h2 id="preguntas-title" className="mt-2 font-serif text-3xl leading-tight font-bold tracking-tight sm:text-4xl">
+            Lo que más nos preguntan
+          </h2>
+          <div className="mt-8 flex flex-col gap-3">
+            {FAQ.map((f, i) => (
+              <details key={f.q} open={i === 0} className="group rounded-2xl border-2 border-border bg-surface p-5 open:border-accent/40">
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-lg font-black [&::-webkit-details-marker]:hidden">
+                  <h3>{f.q}</h3>
+                  <span aria-hidden className="mt-1 text-accent transition group-open:rotate-45">
+                    <svg width="18" height="18" viewBox="0 0 18 18">
+                      <path d="M9 2v14M2 9h14" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+                    </svg>
+                  </span>
+                </summary>
+                <p className="mt-3 font-semibold text-muted">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         {/* ── Trust ── */}
-        <section className="mx-auto max-w-6xl px-4 py-20 md:py-28">
+        <section aria-label="Confianza" className="mx-auto max-w-6xl px-4 pb-20 md:pb-28">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="rounded-[1.75rem] border-2 border-border bg-surface p-6 sm:p-8">
               <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft text-accent">
@@ -635,9 +831,10 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <span className="flex size-12 items-center justify-center rounded-2xl bg-gold-soft text-[#7a5a0c]">
                 <Icon name="heartPulse" size={24} />
               </span>
-              <h2 className="mt-4 font-serif text-2xl font-bold tracking-tight">No reemplaza a tu médico</h2>
+              <h2 className="mt-4 font-serif text-2xl font-bold tracking-tight">Trabaja junto a tu médico</h2>
               <p className="mt-2 font-semibold text-muted">
-                Bombadil es acompañamiento de bienestar y educación: no diagnostica ni receta. Cuando algo merece una consulta, te lo decimos claro.
+                Bombadil acompaña y educa: no diagnostica ni receta. Llegas a la consulta entendiendo tus resultados, con un resumen de una página, y te avisamos claro cuando algo
+                merece consultar pronto.
               </p>
             </div>
           </div>
@@ -650,8 +847,8 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <span className="animate-bounce motion-reduce:animate-none [animation-duration:2s]">
                 <HatAvatar size={72} />
               </span>
-              <p className="mt-6 max-w-2xl font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-5xl">Empieza con un hábito de dos minutos.</p>
-              <p className="mt-3 max-w-lg font-bold text-[#1b2433]/75">Estamos abriendo cupos del piloto en Colombia. Escríbenos y te contamos.</p>
+              <p className="mt-6 max-w-2xl font-serif text-3xl leading-tight font-bold tracking-tight text-balance sm:text-5xl">Que tu próximo examen salga mejor que el último.</p>
+              <p className="mt-3 max-w-lg font-bold text-[#1b2433]/75">Estamos abriendo cupos del piloto en Colombia. Escríbenos y te contamos cómo empezar.</p>
               <a href={JOIN} className={buttonClass("primary", "mt-8 min-h-14 px-8 text-base")}>
                 Quiero participar
               </a>
@@ -662,7 +859,10 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <footer className="border-t-2 border-border bg-surface">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm font-semibold text-muted sm:flex-row sm:items-center sm:justify-between">
-          <Brand />
+          <div>
+            <Brand />
+            <p className="mt-2 max-w-sm text-xs">Interpretación de exámenes, hábitos y salud preventiva basada en evidencia. Hecho en Colombia.</p>
+          </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs">
             <Link href="/privacidad" className="underline-offset-2 hover:text-text hover:underline">
               Aviso de privacidad

@@ -64,6 +64,13 @@ async function noHorizontalScroll(page: Page) {
 }
 
 test("public pages render and protected routes redirect to login", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Quiero participar" }).first()).toHaveAttribute("href", /^mailto:/);
+  await snap(page, "00-landing");
+  await noHorizontalScroll(page);
+  await page.getByRole("link", { name: "Entrar", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole("heading", { name: "Longevidad sin humo." })).toBeVisible();

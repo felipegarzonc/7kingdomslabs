@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { after } from "next/server";
 import { AlertNotices } from "@/components/alert-list";
 import { fmtDate } from "@/components/format";
 import { HabitCard } from "@/components/habit-card";
 import { Card, LinkButton, Notice, PageHeader } from "@/components/ui";
-import { todayInColombia } from "@/domain/habits";
+import { addDays, todayInColombia } from "@/domain/habits";
+import { deviceSummary } from "@/domain/wearables";
 import { pilotWeek } from "@/domain/pilot";
 import { requireParticipant } from "@/lib/auth";
 import { loadHabits } from "@/lib/data/habits";
 import type { ReportContent } from "@/lib/llm/report";
+import { syncStrava } from "@/lib/strava";
+import { createServiceClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { FeedbackCard } from "./feedback-card";
 
@@ -19,6 +23,11 @@ function weekAgo() {
   return new Date(Date.now() - 7 * 24 * 3600e3).toISOString();
 }
 
+/** Strava webhooks are the main path; this catches anything they missed. */
+function staleSync(lastSyncAt: string | null) {
+  return !lastSyncAt || Date.parse(lastSyncAt) < Date.now() - 3 * 3600e3;
+}
+
 const LONG_DATE = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long", timeZone: "America/Bogota" });
 
 export default async function TodayPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
@@ -27,7 +36,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const supabase = await createClient();
   const week = p.pilot_start ? pilotWeek(p.pilot_start) : 1;
   const today = todayInColombia();
-  const [habits, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs, reportRes, docsRes] = await Promise.all([
+  const [habits, checkinRes, replyRes, alertsRes, feedbackRes, pendingDocs, reportRes, docsRes, connsRes, deviceRes] = await Promise.all([
     loadHabits(supabase, p.id),
     supabase.from("checkins").select("id").eq("participant_id", p.id).eq("week", week).maybeSingle(),
     supabase.from("checkin_replies").select("final_text, sent_at").eq("participant_id", p.id).eq("status", "sent").order("sent_at", { ascending: false }).limit(1).maybeSingle(),
@@ -36,7 +45,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     supabase.from("lab_documents").select("id", { count: "exact", head: true }).eq("participant_id", p.id).in("status", ["uploaded", "extracting"]),
     supabase.from("reports").select("content, approved_at").eq("participant_id", p.id).eq("status", "approved").order("approved_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("lab_documents").select("id", { count: "exact", head: true }).eq("participant_id", p.id),
+    supabase.from("device_connections").select("id, participant_id, provider, status, last_sync_at").eq("participant_id", p.id),
+    supabase.from("measurements").select("type, value, measured_at, source").eq("participant_id", p.id).in("source", ["strava", "apple_health"]).gte("measured_at", `${addDays(today, -14)}T00:00:00-05:00`),
   ]);
+  const conns = connsRes.data ?? [];
+  const strava = conns.find((c) => c.provider === "strava");
+  if (strava && strava.status !== "revoked" && staleSync(strava.last_sync_at)) after(() => syncStrava(createServiceClient(), strava, 3));
+  const devices = deviceSummary((deviceRes.data ?? []).map((m) => ({ ...m, value: Number(m.value) })), today, 7);
+  const stepsToday = (deviceRes.data ?? []).find((m) => m.type === "steps" && m.measured_at.slice(0, 10) === today)?.value;
   const active = habits.filter((h) => h.status === "active");
   const suggested = habits.filter((h) => h.status === "suggested");
   const doneToday = active.filter((h) => h.logDays.includes(today)).length;
@@ -83,6 +99,36 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
             </p>
             <LinkButton href={suggested.length ? "/app/plan" : "/app/empezar"} className="mt-3">
               {suggested.length ? "Elegir mis hábitos" : "Armar mi plan (2 minutos)"}
+            </LinkButton>
+          </Card>
+        )}
+
+
+        {conns.length ? (
+          devices ? (
+            <Card title="Tus datos de la semana" action={<Link href="/app/conexiones" className="text-sm font-medium text-accent">Dispositivos</Link>}>
+              <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                {[
+                  ["Pasos hoy", stepsToday !== undefined ? Number(stepsToday).toLocaleString("es-CO") : "—"],
+                  ["Pasos al día", devices.steps_per_day?.toLocaleString("es-CO") ?? "—"],
+                  ["Sueño", devices.sleep_hours !== null ? `${devices.sleep_hours.toLocaleString("es-CO")} h` : "—"],
+                  ["Ejercicio", devices.exercise_minutes_per_week !== null ? `${devices.exercise_minutes_per_week} min/sem` : "—"],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="text-xs text-muted">{k}</dt>
+                    <dd className="text-lg font-semibold tabular-nums">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-2 text-xs text-muted">Promedios de los últimos 7 días. Tus hábitos de movimiento se marcan solos con estos datos.</p>
+            </Card>
+          ) : null
+        ) : (
+          <Card>
+            <p className="font-semibold">¿Usas Strava, Garmin o Apple Watch?</p>
+            <p className="mt-1 text-sm text-muted">Conéctalos y tus pasos, sueño y ejercicio llegan solos; tus hábitos de movimiento se marcan sin que hagas nada.</p>
+            <LinkButton href="/app/conexiones" variant="secondary" className="mt-3">
+              Conectar mis dispositivos
             </LinkButton>
           </Card>
         )}

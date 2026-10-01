@@ -7,9 +7,8 @@ const LINKS = [
   { href: "/app", label: "Hoy" },
   { href: "/app/plan", label: "Mi plan" },
   { href: "/app/examenes", label: "Exámenes" },
-  { href: "/app/informes", label: "Informe" },
   { href: "/app/linea-de-tiempo", label: "Progreso" },
-  { href: "/app/mediciones", label: "Registrar" },
+  { href: "/app/conexiones", label: "Dispositivos" },
   { href: "/app/datos", label: "Mis datos" },
 ];
 

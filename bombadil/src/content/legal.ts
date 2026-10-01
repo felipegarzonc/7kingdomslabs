@@ -10,7 +10,7 @@ export const OPERATOR = {
   city: "Bogotá, Colombia",
 };
 
-export const CONSENT_VERSION = "2026-10-v4";
+export const CONSENT_VERSION = "2026-10-v5";
 
 export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
@@ -21,17 +21,17 @@ export const CONSENT_SECTIONS: Array<{ title: string; body: string }> = [
   {
     title: "Qué datos tratamos",
     body:
-      "Datos de identificación y contacto (nombre, correo), datos básicos (fecha de nacimiento, sexo, estatura) y datos de salud, que son datos sensibles: resultados de exámenes de laboratorio, informes de imágenes diagnósticas (resonancias, ecografías, radiografías, tomografías), mediciones (peso, cintura, presión arterial, frecuencia cardiaca, sueño, ejercicio), respuestas a los check-ins semanales, tus respuestas sobre tu estilo de vida (actividad, sueño, alimentación, alcohol, estrés), tus hábitos y su registro diario, y tus metas.",
+      "Datos de identificación y contacto (nombre, correo), datos básicos (fecha de nacimiento, sexo, estatura) y datos de salud, que son datos sensibles: resultados de exámenes de laboratorio, informes de imágenes diagnósticas (resonancias, ecografías, radiografías, tomografías), mediciones (peso, cintura, presión arterial, frecuencia cardiaca, sueño, ejercicio), respuestas a los check-ins semanales, tus respuestas sobre tu estilo de vida (actividad, sueño, alimentación, alcohol, estrés), tus hábitos y su registro diario, tus metas y, si decides conectarlos, los datos de tus dispositivos y apps (Strava, Apple Salud y, a través de ellos, relojes como Garmin): actividades, pasos, sueño, frecuencia cardiaca en reposo, peso, VO2max y presión arterial.",
   },
   {
     title: "Para qué los usamos",
     body:
-      "Para organizar tu línea de tiempo de exámenes y mediciones, calcular tendencias y metas, generar informes y respuestas de acompañamiento, diseñar y ajustar tu plan de hábitos, detectar valores que ameriten consultar a un médico, y evaluar los resultados del piloto (retención, cambios de hábitos y disposición a pagar) de forma agregada.",
+      "Para organizar tu línea de tiempo de exámenes y mediciones, calcular tendencias y metas, generar informes y respuestas de acompañamiento, diseñar y ajustar tu plan de hábitos, marcar automáticamente los hábitos que tus dispositivos registran, detectar valores que ameriten consultar a un médico, y evaluar los resultados del piloto (retención, cambios de hábitos y disposición a pagar) de forma agregada.",
   },
   {
     title: "Inteligencia artificial y encargados",
     body:
-      "Usamos la API de Anthropic (Claude) para transcribir tus exámenes y redactar textos. Antes de enviar el texto de un examen se enmascaran tus datos identificativos (nombre, documento, teléfono, correo). Tus datos se almacenan en Supabase (base de datos cifrada en reposo y en tránsito). Estos proveedores actúan como encargados del tratamiento y pueden estar fuera de Colombia (transferencia internacional).",
+      "Usamos la API de Anthropic (Claude) para transcribir tus exámenes y redactar textos. Antes de enviar el texto de un examen se enmascaran tus datos identificativos (nombre, documento, teléfono, correo). Tus datos se almacenan en Supabase (base de datos cifrada en reposo y en tránsito). Si conectas Strava o Apple Salud, solo leemos los datos que autorizas allí, guardamos el permiso de acceso en un lugar al que solo llega nuestro servidor, y puedes desconectarlos cuando quieras desde Dispositivos. Estos proveedores actúan como encargados del tratamiento y pueden estar fuera de Colombia (transferencia internacional).",
   },
   {
     title: "Análisis automático",

@@ -30,7 +30,8 @@ export type MeasurementType =
   | "exercise_minutes"
   | "grip_strength"
   | "vo2max"
-  | "alcohol_drinks";
+  | "alcohol_drinks"
+  | "steps";
 
 export type SmokingStatus = "never" | "former" | "current";
 

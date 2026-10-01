@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { BloodPressureChart, MarkerChart } from "@/components/charts";
 import { fmtDateTime, fmtNum } from "@/components/format";
 import { SubmitButton } from "@/components/submit-button";
-import { Card, EmptyState, PageHeader } from "@/components/ui";
+import { Card, EmptyState, LinkButton, PageHeader } from "@/components/ui";
 import { MEASUREMENT_LABEL, MEASUREMENT_UNIT, pairBloodPressure } from "@/domain/snapshot";
+import { SOURCE_LABEL } from "@/domain/wearables";
 import { requireParticipant } from "@/lib/auth";
 import { loadParticipantData } from "@/lib/data/snapshot-input";
 import { createClient } from "@/lib/supabase/server";
@@ -17,7 +18,7 @@ export default async function MeasurementsPage() {
   const supabase = await createClient();
   const { measurements } = await loadParticipantData(supabase, p.id);
   const bp = pairBloodPressure(measurements.map((m) => ({ type: m.type, value: m.value, at: m.measured_at, groupId: m.group_id, context: m.context })));
-  const series = (["weight", "waist", "resting_hr", "sleep_hours", "exercise_minutes", "grip_strength", "vo2max", "alcohol_drinks"] as const)
+  const series = (["steps", "weight", "waist", "resting_hr", "sleep_hours", "exercise_minutes", "grip_strength", "vo2max", "alcohol_drinks"] as const)
     .map((t) => ({ t, points: measurements.filter((m) => m.type === t).map((m) => ({ at: m.measured_at, value: m.value })) }))
     .filter((s) => s.points.length);
   const recent = [...measurements].reverse().filter((m) => m.type !== "bp_diastolic").slice(0, 20);
@@ -25,7 +26,13 @@ export default async function MeasurementsPage() {
 
   return (
     <>
-      <PageHeader title="Mediciones" subtitle="Presión, peso, cintura, frecuencia cardiaca, sueño, ejercicio, fuerza y capacidad física." />
+      <PageHeader title="Mediciones" subtitle="Presión, peso, cintura, frecuencia cardiaca, sueño, ejercicio, fuerza y capacidad física."
+        action={
+          <LinkButton href="/app/conexiones" variant="secondary">
+            Traerlas de mi reloj
+          </LinkButton>
+        }
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
         <Card title="Nueva medición" className="self-start">
           <MeasurementForm />
@@ -59,7 +66,7 @@ export default async function MeasurementsPage() {
                     {" "}
                     · {fmtDateTime(m.measured_at)}
                     {m.context?.period === "night" ? " · noche" : ""}
-                    {m.source !== "manual" ? ` · ${m.source}` : ""}
+                    {m.source !== "manual" ? ` · ${SOURCE_LABEL[m.source] ?? m.source}` : ""}
                   </span>
                 </span>
                 <form action={deleteMeasurement}>

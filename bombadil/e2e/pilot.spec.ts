@@ -123,6 +123,46 @@ test("lifestyle questionnaire → personalised habit plan → logging today", as
   await expect(page.getByText(/Activos \(4\)/)).toBeVisible();
 });
 
+test("Apple Health link: data arrives on its own and logs the strength habit", async ({ page }) => {
+  await login(page, ANA);
+  await page.goto("/app");
+  await page.getByRole("link", { name: "Conectar mis dispositivos" }).click();
+  await expect(page).toHaveURL(/\/app\/conexiones$/);
+  await page.getByRole("button", { name: "Crear mi enlace de Apple Salud" }).click();
+  const url = await page.getByLabel("Tu enlace personal").inputValue();
+  expect(url).toMatch(/\/api\/ingest\/[A-Za-z0-9_-]{20,}$/);
+  await snap(page, "02c-devices");
+  await noHorizontalScroll(page);
+
+  // What Health Auto Export posts (REST API automation, grouped by day).
+  const today = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
+  const payload = {
+    data: {
+      metrics: [
+        { name: "step_count", units: "count", data: [{ date: `${today} 00:00:00 -0500`, qty: 8000 }] },
+        { name: "sleep_analysis", units: "hr", data: [{ date: `${today} 00:00:00 -0500`, totalSleep: 6.5 }] },
+      ],
+      workouts: [{ name: "Traditional Strength Training", start: `${today} 18:00:00 -0500` }],
+    },
+  };
+  const ingestPath = new URL(url).pathname;
+  const res = await page.request.post(ingestPath, { data: payload });
+  expect(res.status()).toBe(200);
+  // Walking was logged by hand earlier; the strength habit is logged by the data.
+  expect(await res.json()).toEqual({ ok: true, stored: 2, habits_logged: 1 });
+  // Re-sending the same day is idempotent.
+  expect(await (await page.request.post(ingestPath, { data: payload })).json()).toEqual({ ok: true, stored: 2, habits_logged: 0 });
+  expect((await page.request.post("/api/ingest/not-a-real-token-123456789", { data: payload })).status()).toBe(404);
+
+  await page.goto("/app");
+  await expect(page.getByText("Tus hábitos · 2 de 4 hoy")).toBeVisible();
+  await expect(page.getByText("Registrado con Apple Salud")).toBeVisible();
+  await expect(page.getByText("Tus datos de la semana")).toBeVisible();
+  await expect(page.getByText("8.000").first()).toBeVisible();
+  await page.goto("/app/conexiones");
+  await expect(page.getByText(/Últimos datos recibidos/)).toBeVisible();
+});
+
 test("a blood pressure crisis shows an urgency immediately", async ({ page }) => {
   await login(page, ANA);
   await page.goto("/app/mediciones");

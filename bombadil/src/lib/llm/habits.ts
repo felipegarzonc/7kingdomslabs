@@ -30,10 +30,12 @@ export interface HabitPlanInput {
   enfoque: string[];
   hallazgos: unknown;
   habitos_actuales: string[];
+  /** Averages from Strava / Apple Health over the last 14 days; null when nothing is connected. */
+  datos_de_dispositivos: unknown;
 }
 
 export async function generateHabitPlan(input: HabitPlanInput): Promise<{ plan: HabitPlan; promptVersion: string; model: string }> {
-  const prompt = await loadPrompt("habit-plan", 1);
+  const prompt = await loadPrompt("habit-plan", 2);
   const model = llmConfig.model();
   try {
     const msg = await anthropic().beta.messages.parse({

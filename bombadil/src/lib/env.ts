@@ -19,4 +19,10 @@ export const env = {
   /** Replies reach the participant right away unless explicitly held for operator review. */
   checkinAutoSend: () => process.env.CHECKIN_AUTO_SEND !== "false",
   alertWebhookUrl: () => process.env.ALERT_WEBHOOK_URL || null,
+  /** Strava API app (strava.com/settings/api). Without both, the Strava button is hidden. */
+  strava: () => {
+    const clientId = process.env.STRAVA_CLIENT_ID?.trim();
+    const clientSecret = process.env.STRAVA_CLIENT_SECRET?.trim();
+    return clientId && clientSecret ? { clientId, clientSecret } : null;
+  },
 };

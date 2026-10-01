@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { MAX_ACTIVE_HABITS, PILLAR_LABEL, todayInColombia } from "@/domain/habits";
 import { describeLifestyle, LifestyleSchema } from "@/domain/lifestyle";
 import { buildSnapshot } from "@/domain/snapshot";
+import { deviceSummary } from "@/domain/wearables";
 import type { ParticipantRow } from "@/lib/auth";
 import { loadImagingForReport, loadParticipantData, toSnapshotInput } from "@/lib/data/snapshot-input";
 import { generateHabitPlan, type HabitPlanInput } from "@/lib/llm/habits";
@@ -32,6 +33,10 @@ async function buildInput(db: SupabaseClient, p: ParticipantRow): Promise<HabitP
       imagenes: imaging,
     },
     habitos_actuales: (habits.data ?? []).map((h) => h.title),
+    datos_de_dispositivos: deviceSummary(
+      data.measurements.map((m) => ({ type: m.type, value: m.value, measured_at: m.measured_at, source: m.source })),
+      todayInColombia(),
+    ),
   };
 }
 

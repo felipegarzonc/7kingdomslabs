@@ -110,7 +110,7 @@ describe.skipIf(!url)("row level security", () => {
     await db?.end();
   });
 
-  const participantTables = ["participants", "consents", "measurements", "lab_documents", "lab_results", "checkins", "reports", "alerts", "checkin_replies", "habits", "habit_logs"];
+  const participantTables = ["participants", "consents", "measurements", "lab_documents", "lab_results", "checkins", "reports", "alerts", "checkin_replies", "habits", "habit_logs", "device_connections"];
 
   it.each(participantTables)("participant A cannot read B's rows in %s", async (table) => {
     const col = table === "participants" ? "id" : "participant_id";
@@ -148,7 +148,7 @@ describe.skipIf(!url)("row level security", () => {
       const r = await asB(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,$2,30,$3,now()) returning id", [ids.pB, type, unit]));
       await asB(() => q("delete from public.measurements where id = $1", [r.rows[0].id]));
     }
-    await expect(asB(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,'steps',1,'x',now())", [ids.pB]))).rejects.toThrow(/check constraint/);
+    await expect(asB(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,'heart_rate_peak',1,'x',now())", [ids.pB]))).rejects.toThrow(/check constraint/);
   });
 
   it("habits: each participant manages and logs only their own", async () => {
@@ -165,6 +165,22 @@ describe.skipIf(!url)("row level security", () => {
     await asB(() => q(`select public.update_my_lifestyle('{"sleep_hours":6}'::jsonb, '')`));
     const p = await asB(() => q("select lifestyle, personal_goal from public.participants"));
     expect(p.rows[0]).toEqual({ lifestyle: { sleep_hours: 6 }, personal_goal: "meta B" });
+  });
+
+  it("devices: participants see only their own connections and never the tokens", async () => {
+    // The server (service role, here the superuser) stores connections and secrets.
+    const c = await q("insert into public.device_connections (participant_id, provider, external_user_id) values ($1,'strava','111'),($2,'apple_health',null) returning id, participant_id", [ids.pA, ids.pB]);
+    for (const row of c.rows) await q("insert into public.device_secrets (connection_id, access_token, ingest_token) values ($1,'secret-token',$2)", [row.id, `tok-${row.id}`]);
+    const mine = await asA(() => q("select provider from public.device_connections"));
+    expect(mine.rows).toEqual([{ provider: "strava" }]);
+    await expect(asA(() => q("select * from public.device_secrets"))).rejects.toThrow(/permission denied/);
+    await expect(asA(() => q("insert into public.device_connections (participant_id, provider) values ($1,'apple_health')", [ids.pA]))).rejects.toThrow(/row-level security|permission denied/);
+    await expect(as(null, null, () => q("select * from public.device_connections"))).rejects.toThrow(/permission denied/);
+    expect((await asAdmin(() => q("select count(*)::int as n from public.device_connections"))).rows[0].n).toBe(2);
+    // Imported rows are deduplicated per source; manual rows (no external id) never collide.
+    await q("insert into public.measurements (participant_id,type,value,unit,measured_at,source,external_id) values ($1,'steps',5000,'pasos',now(),'apple_health','day:2026-10-01')", [ids.pA]);
+    await expect(q("insert into public.measurements (participant_id,type,value,unit,measured_at,source,external_id) values ($1,'steps',6000,'pasos',now(),'apple_health','day:2026-10-01')", [ids.pA])).rejects.toThrow(/measurements_external_unique/);
+    await asA(() => q("insert into public.measurements (participant_id,type,value,unit,measured_at) values ($1,'steps',1,'pasos',now()),($1,'steps',2,'pasos',now())", [ids.pA]));
   });
 
   it("consent is recorded with version and hash", async () => {

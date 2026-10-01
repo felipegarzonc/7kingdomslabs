@@ -20,6 +20,9 @@ const PROJECT = process.env.VERCEL_PROJECT ?? "bombadil";
 const vt = need("VERCEL_TOKEN");
 const st = need("SUPABASE_ACCESS_TOKEN");
 const anthropicKey = process.env.BOMBADIL_ANTHROPIC_API_KEY?.trim() ?? "";
+// Optional: a Strava API app (strava.com/settings/api) with callback domain = the site's domain.
+const stravaId = process.env.STRAVA_CLIENT_ID?.trim() ?? "";
+const stravaSecret = process.env.STRAVA_CLIENT_SECRET?.trim() ?? "";
 
 function need(name: string): string {
   const v = process.env[name]?.trim();
@@ -95,6 +98,10 @@ async function main() {
     CHECKIN_AUTO_SEND: { value: "true", type: "plain" },
   };
   if (anthropicKey) envs.ANTHROPIC_API_KEY = { value: anthropicKey, type: "sensitive" };
+  if (stravaId && stravaSecret) {
+    envs.STRAVA_CLIENT_ID = { value: stravaId, type: "plain" };
+    envs.STRAVA_CLIENT_SECRET = { value: stravaSecret, type: "sensitive" };
+  }
   const setEnv = async () => {
     step("Cargando variables de entorno");
     await api(V, vt, `/v10/projects/${project.id}/env?upsert=true${qa}`, {
@@ -140,12 +147,36 @@ async function main() {
     body: JSON.stringify({ site_url: siteUrl, uri_allow_list: `${siteUrl}/auth/confirm,${siteUrl}/**` }),
   });
 
+  // ── Strava webhook (new activities arrive without waiting for the next visit) ──
+  if (stravaId && stravaSecret) {
+    step("Registrando el webhook de Strava");
+    await ensureStravaWebhook(`${siteUrl}/api/strava/webhook`).catch((e) => console.warn(`  ⚠ Webhook de Strava: ${(e as Error).message}`));
+  }
+
   // ── Self-check ──
   step("Revisando /estado");
   const html = await (await fetch(`${siteUrl}/estado`)).text();
   const failed = [...html.matchAll(/✗<\/span>\s*(?:<!-- -->)?\s*([^<]+)/g)].map((m) => m[1].trim());
   console.log(`\n✓ Bombadil publicado: ${siteUrl}`);
   console.log(failed.length ? `  Pendiente según /estado: ${failed.join(", ")}` : "  /estado: todo en verde.");
+}
+
+/** Must match stravaVerifyToken() in src/lib/strava.ts. */
+async function stravaVerifyToken(): Promise<string> {
+  const { createHash } = await import("node:crypto");
+  return createHash("sha256").update(`bombadil-strava-webhook:${stravaSecret}`).digest("hex").slice(0, 32);
+}
+
+async function ensureStravaWebhook(callbackUrl: string) {
+  const base = "https://www.strava.com/api/v3/push_subscriptions";
+  const auth = new URLSearchParams({ client_id: stravaId, client_secret: stravaSecret });
+  const existing = (await (await fetch(`${base}?${auth}`)).json()) as Array<{ id: number; callback_url: string }>;
+  if (Array.isArray(existing) && existing.some((s) => s.callback_url === callbackUrl)) return step("  ya estaba registrado");
+  for (const s of Array.isArray(existing) ? existing : []) await fetch(`${base}/${s.id}?${auth}`, { method: "DELETE" });
+  const body = new URLSearchParams({ client_id: stravaId, client_secret: stravaSecret, callback_url: callbackUrl, verify_token: await stravaVerifyToken() });
+  const res = await fetch(base, { method: "POST", body });
+  if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 200)}`);
+  step("  registrado");
 }
 
 main().catch((e) => fail(e instanceof Error ? e.message : String(e)));

@@ -380,6 +380,7 @@ export const MEASUREMENT_LABEL: Record<MeasurementType, string> = {
   grip_strength: "Fuerza de agarre",
   vo2max: "VO2max estimado",
   alcohol_drinks: "Tragos de alcohol (semana)",
+  steps: "Pasos (día)",
 };
 
 export const MEASUREMENT_TYPES = Object.keys(MEASUREMENT_LABEL) as MeasurementType[];
@@ -395,6 +396,7 @@ export const MEASUREMENT_UNIT: Record<MeasurementType, string> = {
   grip_strength: "kg",
   vo2max: "ml/kg/min",
   alcohol_drinks: "tragos",
+  steps: "pasos",
 };
 
 /** Plausibility bounds to catch typos on manual entry. */
@@ -409,4 +411,5 @@ export const MEASUREMENT_BOUNDS: Record<MeasurementType, [number, number]> = {
   grip_strength: [5, 100],
   vo2max: [10, 90],
   alcohol_drinks: [0, 150],
+  steps: [0, 100000],
 };

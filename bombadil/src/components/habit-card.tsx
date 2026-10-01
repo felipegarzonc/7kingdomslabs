@@ -1,4 +1,5 @@
 import { logHabit, levelUpHabit, shrinkHabit } from "@/app/app/habitos/actions";
+import { SOURCE_LABEL } from "@/domain/wearables";
 import { addDays, PILLAR_LABEL, progression, streak, weekProgress, weekStart } from "@/domain/habits";
 import type { HabitWithLogs } from "@/lib/data/habits";
 import { SubmitButton } from "./submit-button";
@@ -49,11 +50,14 @@ export function HabitCard({ habit, today }: { habit: HabitWithLogs; today: strin
 
       <div className="mt-3 flex flex-wrap gap-2">
         {doneToday ? (
-          <form action={logHabit}>
-            <input type="hidden" name="habit_id" value={habit.id} />
-            <input type="hidden" name="mode" value="undo" />
-            <SubmitButton variant="secondary">{tinyToday ? "✓ Versión mínima hecha · deshacer" : "✓ Hecho hoy · deshacer"}</SubmitButton>
-          </form>
+          <>
+            <form action={logHabit}>
+              <input type="hidden" name="habit_id" value={habit.id} />
+              <input type="hidden" name="mode" value="undo" />
+              <SubmitButton variant="secondary">{tinyToday ? "✓ Versión mínima hecha · deshacer" : "✓ Hecho hoy · deshacer"}</SubmitButton>
+            </form>
+            {habit.autoDays[today] ? <p className="self-center text-xs text-muted">Registrado con {SOURCE_LABEL[habit.autoDays[today]] ?? habit.autoDays[today]}</p> : null}
+          </>
         ) : (
           <>
             <form action={logHabit}>

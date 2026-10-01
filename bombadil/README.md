@@ -15,6 +15,7 @@ metas cortas y un check-in semanal de menos de 2 minutos.
 | Onboarding de un minuto (consentimiento, fecha de nacimiento, sexo) y cuestionario de estilo de vida de 8 preguntas | Invita participantes por correo |
 | Plan de hábitos de longevidad: hasta 3 hábitos pequeños anclados a su rutina, registro diario (completo o versión mínima), rachas y progresión semanal (subir de nivel / hacerlo más fácil) | (exportable con los datos del participante) |
 | Sube PDFs de laboratorio o informes de imágenes: se analizan solos y la página del examen muestra qué significa y qué hacer, con pasos concretos | Corrige cualquier extracción al lado del PDF original (y transcribe a mano las que fallan) |
+| Conecta Strava (y Garmin, Polar, Coros… a través de Strava) y Apple Salud (app Health Auto Export): pasos, sueño, pulso en reposo, peso, VO2max, presión y ejercicio llegan solos y marcan sus hábitos de movimiento y fuerza | Ve las conexiones en la exportación de datos |
 | Registra presión (brazo, día/noche), peso, cintura, FC, sueño, ejercicio, fuerza de agarre, VO2max y tragos de alcohol por semana | Puede generar, editar y publicar informes a mano además de los automáticos |
 | Línea de tiempo por marcador con rango de referencia y tendencia | Revisa y envía las respuestas a los check-ins |
 | Métricas derivadas: IMC, cintura/estatura, no-HDL, TG/HDL, FIB-4 (hígado), síndrome metabólico (ATP III e IDF), descenso nocturno de PA | Panel del piloto: retención semana a semana, efecto medible, disposición a pagar |
@@ -102,6 +103,7 @@ cp .env.example .env.local   # y completa los valores
 | `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) |
 | `NEXT_PUBLIC_SITE_URL` | URL pública de la app |
 | `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` | Opcionales (por defecto `claude-opus-5-5`, `high`) |
+| `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` | Opcional. App de la API de Strava (strava.com/settings/api) con *Authorization Callback Domain* = el dominio del sitio. Sin ellas, el botón de Strava se oculta. `scripts/deploy-vercel.ts` las copia a Vercel y registra el webhook |
 | `CHECKIN_AUTO_SEND` | `false` para dejar las respuestas en borrador para el operador (por defecto se envían solas) |
 | `ALERT_WEBHOOK_URL` | Opcional: webhook de Slack/Discord para urgencias |
 

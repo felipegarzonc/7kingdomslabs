@@ -36,7 +36,20 @@ export default async function TimelinePage() {
 
   return (
     <>
-      <PageHeader title="Línea de tiempo" subtitle="Todos tus exámenes analizados, de todos los laboratorios y años." />
+      <PageHeader
+        title="Progreso"
+        subtitle="Tus exámenes de todos los laboratorios y años, y tus mediciones."
+        action={
+          <div className="flex flex-wrap gap-2">
+            <LinkButton href="/app/mediciones" variant="secondary">
+              Mediciones
+            </LinkButton>
+            <LinkButton href="/app/informes" variant="secondary">
+              Informe
+            </LinkButton>
+          </div>
+        }
+      />
       {!snapshot.markers.length ? (
         <EmptyState title="Aún no hay resultados">
           <p className="mb-3">Sube tus exámenes en PDF. Aparecerán aquí en uno o dos minutos.</p>

@@ -1,4 +1,5 @@
 import "server-only";
+import { disconnectStrava } from "@/lib/strava";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 /**
@@ -7,6 +8,9 @@ import { createServiceClient } from "@/lib/supabase/admin";
  */
 export async function deleteParticipantCompletely(participantId: string, authUserId: string | null): Promise<void> {
   const db = createServiceClient();
+  // Revoke Strava's access too, not just our copy of the token.
+  const { data: strava } = await db.from("device_connections").select("id").eq("participant_id", participantId).eq("provider", "strava").maybeSingle();
+  if (strava) await disconnectStrava(db, strava.id);
   const { data: files } = await db.storage.from("lab-pdfs").list(participantId, { limit: 1000 });
   if (files?.length) await db.storage.from("lab-pdfs").remove(files.map((f) => `${participantId}/${f.name}`));
   const { error } = await db.from("participants").delete().eq("id", participantId);
@@ -16,7 +20,7 @@ export async function deleteParticipantCompletely(participantId: string, authUse
 
 /** Everything we hold about a participant, for the right of access / portability. */
 export async function exportParticipantData(supabase: import("@supabase/supabase-js").SupabaseClient, participantId: string) {
-  const tables = ["consents", "lab_documents", "lab_results", "measurements", "goals", "checkins", "checkin_replies", "reports", "alerts", "pilot_feedback", "habits", "habit_logs"] as const;
+  const tables = ["consents", "lab_documents", "lab_results", "measurements", "goals", "checkins", "checkin_replies", "reports", "alerts", "pilot_feedback", "habits", "habit_logs", "device_connections"] as const;
   const { data: participant } = await supabase.from("participants").select("*").eq("id", participantId).single();
   const out: Record<string, unknown> = { exported_at: new Date().toISOString(), participant };
   for (const t of tables) {
